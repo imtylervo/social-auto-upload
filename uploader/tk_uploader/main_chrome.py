@@ -70,14 +70,32 @@ async def get_tiktok_cookie(account_file):
         await context.storage_state(path=account_file)
 
 
+PRIVACY_LABELS = ("Everyone", "Friends", "Only you")
+UPLOAD_URL = "https://www.tiktok.com/tiktokstudio/upload"
+CONTENT_URL = "https://www.tiktok.com/tiktokstudio/content"
+# TikTok Studio as of 2026-11: the Post button has a stable data-e2e; the older button-group markup is kept as a fallback.
+POST_BUTTON = '[data-e2e="post_video_button"], div.button-group > button:has-text("Post")'
+
+
 class TiktokVideo(object):
-    def __init__(self, title, file_path, tags, publish_date, account_file, thumbnail_path=None):
+    def __init__(self, title, file_path, tags, publish_date, account_file, thumbnail_path=None, privacy=None,
+                 proxy=None):
+        """
+        privacy: None keeps TikTok's default, or one of PRIVACY_LABELS ("Everyone", "Friends", "Only you").
+        proxy: optional Playwright proxy dict for upload(), e.g. {"server": "http://127.0.0.1:7890"}.
+        """
+        if privacy is not None and privacy not in PRIVACY_LABELS:
+            raise ValueError(f"privacy must be one of {PRIVACY_LABELS}")
+        if privacy == "Only you" and publish_date != 0:
+            raise ValueError("TikTok cannot schedule a private video: use publish_date=0 with privacy='Only you'")
         self.title = title
         self.file_path = file_path
         self.tags = tags
         self.publish_date = publish_date
         self.thumbnail_path = thumbnail_path
         self.account_file = account_file
+        self.privacy = privacy
+        self.proxy = proxy
         self.local_executable_path = LOCAL_CHROME_PATH
         self.headless = LOCAL_CHROME_HEADLESS
         self.locator_base = None
@@ -147,23 +165,52 @@ class TiktokVideo(object):
         await file_chooser.set_files(self.file_path)
 
     async def upload(self, playwright: Playwright) -> None:
-        browser = await playwright.chromium.launch(headless=self.headless, executable_path=self.local_executable_path)
+        launch_options = {"headless": self.headless}
+        if self.local_executable_path:
+            launch_options["executable_path"] = self.local_executable_path
+        if self.proxy:
+            launch_options["proxy"] = self.proxy
+        browser = await playwright.chromium.launch(**launch_options)
         context = await browser.new_context(storage_state=f"{self.account_file}")
         # context = await set_init_script(context)
         page = await context.new_page()
 
         # change language to eng first
         await self.change_language(page)
-        await page.goto("https://www.tiktok.com/tiktokstudio/upload")
+        video_id = await self.upload_on_page(page)
+        tiktok_logger.success(f"video_id: {video_id}")
+
+        await context.storage_state(path=f"{self.account_file}")  # save cookie
+        tiktok_logger.info('  [-] update cookie！')
+        await asyncio.sleep(2)  # close delay for look the video status
+        # close all
+        await context.close()
+        await browser.close()
+
+    async def upload_on_page(self, page):
+        """
+        The whole flow on a page that is already signed in and shows TikTok in English. Use this directly when the
+        browser is not launched by upload() (another Playwright-compatible browser, a persistent profile, a proxy).
+        Returns the id of the newest video in the content list.
+        """
+        await self.fill_form(page)
+        await self.click_publish(page)
+        return await self.get_last_video_id(page)
+
+    async def fill_form(self, page):
+        """Everything up to, but not including, the click on Post."""
+        await page.goto(UPLOAD_URL)
         tiktok_logger.info(f'[+]Uploading-------{self.title}.mp4')
 
-        await page.wait_for_url("https://www.tiktok.com/tiktokstudio/upload", timeout=10000)
+        await page.wait_for_url(UPLOAD_URL, timeout=10000)
 
         try:
-            await page.wait_for_selector('iframe[data-tt="Upload_index_iframe"], div.upload-container', timeout=10000)
-            tiktok_logger.info("Either iframe or div appeared.")
+            await page.wait_for_selector(
+                'iframe[data-tt="Upload_index_iframe"], div.upload-container, button:has-text("Select video")',
+                timeout=15000)
+            tiktok_logger.info("Upload page is ready.")
         except Exception as e:
-            tiktok_logger.error("Neither iframe nor div appeared within the timeout.")
+            tiktok_logger.error("The upload page did not show its upload area within the timeout.")
 
         await self.choose_base_locator(page)
 
@@ -176,6 +223,11 @@ class TiktokVideo(object):
         file_chooser = await fc_info.value
         await file_chooser.set_files(self.file_path)
 
+        # the form (and with it the Post button) appears once TikTok accepted the file
+        await self.locator_base.locator(POST_BUTTON).first.wait_for(state='visible', timeout=120000)
+        # pop-ups TikTok shows over the form a few seconds later; they swallow every click until closed
+        await self.dismiss_popups(page, wait_ms=15000)
+
         await self.add_title_tags(page)
         # detect upload status
         await self.detect_upload_status(page)
@@ -183,18 +235,66 @@ class TiktokVideo(object):
             tiktok_logger.info(f'[+] Uploading thumbnail file {self.title}.png')
             await self.upload_thumbnails(page)
 
+        await self.dismiss_popups(page)
+        if self.privacy:
+            shown = await self.set_privacy(page, self.privacy)
+            tiktok_logger.info(f"  [-] who can see this post: {shown}")
+
         if self.publish_date != 0:
             await self.set_schedule_time(page, self.publish_date)
 
-        await self.click_publish(page)
-        tiktok_logger.success(f"video_id: {await self.get_last_video_id(page)}")
+    async def dismiss_popups(self, page, wait_ms=0):
+        """
+        Close what TikTok Studio lays over the upload form. The "Turn on automatic content checks?" offer is declined
+        (Cancel): an account setting is not changed here. Polls for wait_ms because the offer shows up late.
+        """
+        deadline = asyncio.get_event_loop().time() + wait_ms / 1000
+        while True:
+            offer = self.locator_base.locator('[role="dialog"]:has-text("automatic content checks")')
+            if await offer.count():
+                tiktok_logger.info("  [-] declining the automatic content checks offer")
+                await offer.get_by_role("button", name="Cancel").click()
+            got_it = self.locator_base.locator('button:has-text("Got it"):visible')
+            if await got_it.count():
+                await got_it.first.click()
+            if asyncio.get_event_loop().time() >= deadline:
+                return
+            await page.wait_for_timeout(1000)
 
-        await context.storage_state(path=f"{self.account_file}")  # save cookie
-        tiktok_logger.info('  [-] update cookie！')
-        await asyncio.sleep(2)  # close delay for look the video status
-        # close all
-        await context.close()
-        await browser.close()
+    async def set_privacy(self, page, label):
+        """Set "Who can see this post" to label and return what the control shows afterwards."""
+        trigger = self.locator_base.locator('button[role="combobox"]').filter(
+            has_text=re.compile(r"^(%s)$" % "|".join(PRIVACY_LABELS))).last
+        await trigger.scroll_into_view_if_needed()
+        if (await trigger.inner_text()).strip() != label:
+            await trigger.click()
+            option = self.locator_base.locator('[role="option"]').filter(has_text=re.compile(rf"^{re.escape(label)}"))
+            await option.first.click(timeout=10000)
+            await page.wait_for_timeout(800)
+        shown = (await trigger.inner_text()).strip()
+        if shown != label:
+            raise RuntimeError(f"privacy is {shown!r} after choosing {label!r}")
+        return shown
+
+    async def delete_video(self, page, video_id):
+        """Delete one post by its video id from the TikTok Studio content list. Returns True when it is gone."""
+        await page.goto(CONTENT_URL)
+        await page.wait_for_selector('div[data-tt="components_PostTable_Container"]', timeout=45000)
+        await page.wait_for_timeout(4000)
+        link = page.locator(f'div[data-tt="components_PostInfoCell_Container"] a[href*="/video/{video_id}"]').first
+        if not await link.count():
+            raise RuntimeError(f"video {video_id} is not in the content list")
+        row = link.locator('xpath=ancestor::*[.//button][.//*[contains(text(),"Private") or '
+                           'contains(text(),"Everyone") or contains(text(),"Friends")]][1]')
+        await row.locator("button").last.click()  # the "..." actions button of that row
+        await page.wait_for_timeout(1200)
+        await page.get_by_text("Delete", exact=True).locator("visible=true").last.click(timeout=8000)
+        await page.wait_for_timeout(1500)
+        await page.locator("button:visible").filter(has_text=re.compile(r"^Delete$")).last.click(timeout=10000)
+        await page.wait_for_timeout(6000)
+        await page.reload()
+        await page.wait_for_timeout(8000)
+        return await page.locator(f'a[href*="/video/{video_id}"]').count() == 0
 
     async def add_title_tags(self, page):
 
@@ -253,21 +353,28 @@ class TiktokVideo(object):
         await page.locator('[data-e2e="language-select"]').click()
         await page.locator('#creator-tools-selection-menu-header >> text=English (US)').click()
 
-    async def click_publish(self, page):
-        success_flag_div = 'div.common-modal-confirm-modal'
-        while True:
-            try:
-                publish_button = self.locator_base.locator('div.button-group button').nth(0)
-                if await publish_button.count():
-                    await publish_button.click()
-
-                await page.wait_for_url("https://www.tiktok.com/tiktokstudio/content",  timeout=3000)
+    async def click_publish(self, page, timeout=180):
+        """Click Post and wait for the content list. Raises TimeoutError instead of looping forever."""
+        deadline = asyncio.get_event_loop().time() + timeout
+        publish_button = self.locator_base.locator(POST_BUTTON).first
+        clicked = False
+        while asyncio.get_event_loop().time() < deadline:
+            if page.url.startswith(CONTENT_URL):
                 tiktok_logger.success("  [-] video published success")
-                break
-            except Exception as e:
-                tiktok_logger.exception(f"  [-] Exception: {e}")
+                return
+            try:
+                # TikTok asks again when its checks have not finished yet
+                confirm = self.locator_base.locator('[role="dialog"] button:has-text("Post now"):visible')
+                if await confirm.count():
+                    await confirm.first.click()
+                elif not clicked and await publish_button.count() and await publish_button.is_enabled():
+                    await publish_button.click()
+                    clicked = True
+                await page.wait_for_url(CONTENT_URL + "**", timeout=3000)
+            except Exception:
                 tiktok_logger.info("  [-] video publishing")
                 await asyncio.sleep(0.5)
+        raise TimeoutError(f"TikTok did not open the content list within {timeout}s after Post")
 
     async def get_last_video_id(self, page):
         await page.wait_for_selector('div[data-tt="components_PostTable_Container"]')
@@ -278,24 +385,25 @@ class TiktokVideo(object):
             return video_id
 
 
-    async def detect_upload_status(self, page):
-        while True:
+    async def detect_upload_status(self, page, timeout=900):
+        """Wait until TikTok has the whole file (Post becomes clickable). Raises TimeoutError after timeout seconds."""
+        deadline = asyncio.get_event_loop().time() + timeout
+        post_button = self.locator_base.locator(POST_BUTTON).first
+        while asyncio.get_event_loop().time() < deadline:
             try:
-                # if await self.locator_base.locator('div.btn-post > button').get_attribute("disabled") is None:
-                if await self.locator_base.locator(
-                        'div.button-group > button >> text=Post').get_attribute("disabled") is None:
+                if await post_button.count() and await post_button.is_enabled():
                     tiktok_logger.info("  [-]video uploaded.")
-                    break
-                else:
-                    tiktok_logger.info("  [-] video uploading...")
-                    await asyncio.sleep(2)
-                    if await self.locator_base.locator(
-                            'button[aria-label="Select file"]').count():
-                        tiktok_logger.info("  [-] found some error while uploading now retry...")
-                        await self.handle_upload_error(page)
-            except:
+                    return
                 tiktok_logger.info("  [-] video uploading...")
                 await asyncio.sleep(2)
+                if await self.locator_base.locator(
+                        'button[aria-label="Select file"]').count():
+                    tiktok_logger.info("  [-] found some error while uploading now retry...")
+                    await self.handle_upload_error(page)
+            except Exception:
+                tiktok_logger.info("  [-] video uploading...")
+                await asyncio.sleep(2)
+        raise TimeoutError(f"the video was not ready to post within {timeout}s")
 
     async def choose_base_locator(self, page):
         # await page.wait_for_selector('div.upload-container')

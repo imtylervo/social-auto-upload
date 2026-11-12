@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+### TikTok (Chrome 版)
+
+- 适配 2026-11 的 TikTok Studio 上传表单：发布按钮改用 `data-e2e="post_video_button"`（保留旧选择器作为回退）。
+- 自动关闭遮挡表单的弹窗（"Turn on automatic content checks?" 选择 Cancel，不替用户开启账号设置）。
+- `TiktokVideo` 新增可选参数 `privacy`（`Everyone` / `Friends` / `Only you`）和 `proxy`（Playwright 代理配置）。
+- 新增 `upload_on_page(page)` / `fill_form(page)`：可在外部已登录的 Playwright 页面上执行流程（其他浏览器、持久化 profile、代理）。
+- 新增 `delete_video(page, video_id)`：从 TikTok Studio 内容列表删除指定视频。
+- `detect_upload_status` 和 `click_publish` 增加超时，失败时抛出 `TimeoutError`，不再无限循环。
+
 ### 结构与 CLI
 
 - 将 `sau_cli.py` 从单体入口拆为 `sau_commands/` 下的按平台命令模块，入口只负责注册和分发。
