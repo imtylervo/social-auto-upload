@@ -73,11 +73,11 @@ class DayuArticleFileTests(unittest.TestCase):
             account.with_suffix(".identity.json").write_text(
                 json.dumps({"wmid": "a" * 32, "name": "测试账号"}), encoding="utf-8")
             for source, link, indices, message in (
-                ("转载", "", [], "原文链接"),
-                ("无需标注", "https://example.com", [], "仅信息来源"),
-                ("无需标注", "", [2], "超出"),
-                ("无需标注", "", [1, 1], "1 个或 3 个"),
-                ("无需标注", "", [1, 1, 1], "不同"),
+                ("转载", "", [], "link of the original"),
+                ("无需标注", "https://example.com", [], "may only be given when the information source is"),
+                ("无需标注", "", [2], "outside the range"),
+                ("无需标注", "", [1, 1], "1 or 3 body image numbers"),
+                ("无需标注", "", [1, 1, 1], "different body image numbers"),
             ):
                 with self.subTest(source=source, indices=indices):
                     app = DayuArticle("图文条件检查标题", BASE_DIR / "examples/dayu_article.html",
