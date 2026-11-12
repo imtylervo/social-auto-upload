@@ -1,16 +1,16 @@
 ---
 name: hupu-upload
-description: 使用 social-auto-upload 的 `sau hupu` 登录虎扑并发布视频，可指定封面。Use when 用户要向虎扑发布视频或检查虎扑账号状态。
+description: Use social-auto-upload's `sau hupu` to log in to Hupu and publish videos, with an optional cover. Use when the user wants to publish a video to Hupu or check the Hupu account state.
 license: MIT-0
 slug: social-auto-upload-hupu-upload
-displayName: 虎扑视频发布
+displayName: Hupu video publishing
 version: 1.0.0
-summary: 登录虎扑并发布视频，可指定封面。
+summary: Log in to Hupu and publish videos, with an optional cover.
 ---
 
-# 虎扑视频发布
+# Hupu video publishing
 
-调用现有 CLI，不另写网页上传流程。账号名是本地会话别名。
+Call the existing CLI; do not write a separate web upload flow. The account name is a local session alias.
 
 ```powershell
 sau hupu login --account creator --headed
@@ -18,6 +18,6 @@ sau hupu check --account creator
 sau hupu upload-video --account creator --file videos/demo.mp4 --title "标题" --desc "简介" --tags 虎扑,测试 --thumbnail covers/demo.png
 ```
 
-当前仅支持视频，不支持图文和定时发布。标题长度为 4–40 个字。登录可能需要用户在浏览器中完成 QQ 或手机号验证；需要看见页面时保留 `--headed`。封面参数 `--thumbnail` 可省略。
+Only videos are supported for now; image posts and scheduled publishing are not. The title is 4–40 characters. Login may require the user to complete QQ or phone-number verification in the browser; keep `--headed` when the page needs to be visible. The cover argument `--thumbnail` can be omitted.
 
-发布前核对账号、视频、标题长度、简介、标签和封面。结果不明确时先查虎扑后台，不直接重发。
+Before publishing, check the account, video, title length, description, tags and cover. If the result is unclear, check the Hupu backend first and do not resend directly.

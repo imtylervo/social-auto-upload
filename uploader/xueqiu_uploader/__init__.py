@@ -1,1 +1,1 @@
-"""雪球创作者中心长文自动化。"""
+"""Long-post automation for the Xueqiu creator center."""

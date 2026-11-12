@@ -1,4 +1,4 @@
-"""alipay 的命令参数与执行逻辑。"""
+"""Command arguments and execution logic for alipay."""
 from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,7 +13,7 @@ from sau_commands.arguments import (
 
 
 def register(platform_parsers):
-    """声明本平台命令、参数及合法选项。"""
+    """Declare this platform's commands, arguments and allowed options."""
     schedule_help = SCHEDULE_FORMAT.replace("%", "%%")
     alipay_parser = platform_parsers.add_parser("alipay", help="Alipay life account operations")
     alipay_actions = alipay_parser.add_subparsers(dest="action", required=True)
@@ -84,7 +84,7 @@ async def upload_alipay_video(request: AlipayVideoUploadRequest) -> Path:
 
 
 async def run(args):
-    """执行本平台命令；发布结果由平台实现核验。"""
+    """Run this platform's command; the platform implementation verifies the publish result."""
     if args.action == "login":
         result = await login_alipay_account(args.account, headless=args.headless)
         if not result["success"]:

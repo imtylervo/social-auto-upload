@@ -1,4 +1,4 @@
-"""通过 Meta Business Suite 发布 Facebook Page 内容。"""
+"""Publish Facebook Page content through Meta Business Suite."""
 
 from __future__ import annotations
 
@@ -18,13 +18,13 @@ from uploader.base_video import BaseVideoUploader
 
 META_BUSINESS_URL = "https://business.facebook.com/latest/composer/"
 META_PLATFORMS = {"facebook-page"}
-# 未配置环境变量或 --proxy 时使用系统直连。
+# Without the environment variable or --proxy, connect directly through the system.
 FACEBOOK_PAGE_PROXY = os.environ.get("SAU_FACEBOOK_PAGE_PROXY")
 
 
 def meta_account_file(platform: str, account_name: str) -> Path:
     if platform not in META_PLATFORMS:
-        raise ValueError(f"不支持的 Meta Business 平台: {platform}")
+        raise ValueError(f"Unsupported Meta Business platform: {platform}")
     return Path("cookies") / f"{platform}_{account_name}.json"
 
 
@@ -57,10 +57,10 @@ async def _open_business_page(
 
 
 async def dismiss_guidance_cards(page: Page) -> None:
-    """关闭带明确 GeoGuidanceCard 业务标识的说明卡，不处理未知弹窗。"""
-    # 中英日卡片中关闭按钮无 aria-label，了解更多带 aria-label；不用 Close/关闭/閉じる 文案。
+    """Close info cards that carry an explicit GeoGuidanceCard marker; leave unknown dialogs alone."""
+    # In the Chinese, English and Japanese cards the close button has no aria-label while Learn more has one; do not rely on the text Close/关闭/閉じる.
     close_buttons = page.locator('[data-surface$="lib:GeoGuidanceCard"] [role="button"]:not([aria-label]):visible')
-    # data-surface 可能同时出现在包裹节点和日志节点上；直接选其后代按钮，由 CSS 去重。
+    # data-surface can appear on both the wrapper node and the logging node; select the descendant button directly and let CSS deduplicate.
     for close in await close_buttons.all():
         await close.click()
         await expect(close).to_be_hidden()
@@ -72,7 +72,7 @@ async def _is_business_logged_out(page: Page) -> bool:
         return True
     if await page.locator('input[name="email"]').count() and await page.locator('input[name="email"]').first.is_visible():
         return True
-    # 导航 href 与页面业务 surface 均独立于显示语言；空白页不能作为已登录证据。
+    # Navigation hrefs and page surfaces do not depend on the display language; a blank page is no evidence of being logged in.
     navigation = page.locator('a[href*="/latest/home"]')
     return not await navigation.filter(visible=True).count()
 
@@ -114,7 +114,7 @@ async def meta_setup(
             channel="chrome", headless=headless, proxy=_proxy_options(proxy)
         )
         try:
-            # 已有 Facebook 登录态可作为 Business Suite 的初始 Cookie，避免重复登录。
+            # An existing Facebook login state can seed the Business Suite cookies, so you do not have to log in again.
             source = account_file
             context = await browser.new_context(storage_state=str(source) if source.is_file() else None)
             page = await context.new_page()
@@ -139,7 +139,7 @@ async def meta_setup(
 
 
 class MetaBusinessUploader(BaseVideoUploader):
-    """Business Suite 中的 Facebook Page 视频和图文发布器。"""
+    """Publisher for Facebook Page videos and image posts in Business Suite."""
 
     def __init__(
         self,
@@ -158,11 +158,11 @@ class MetaBusinessUploader(BaseVideoUploader):
         result_file: str | Path | None = None,
     ):
         if platform not in META_PLATFORMS:
-            raise ValueError(f"不支持的 Meta Business 平台: {platform}")
+            raise ValueError(f"Unsupported Meta Business platform: {platform}")
         if not title.strip():
-            raise ValueError("标题不能为空")
+            raise ValueError("Title must not be empty")
         if bool(video_file) == bool(image_files):
-            raise ValueError("必须且只能传入视频或图片文件")
+            raise ValueError("Pass either a video or image files, not both and not neither")
         self.platform = platform
         self.account_file = Path(account_file)
         self.title = title.strip()
@@ -184,16 +184,16 @@ class MetaBusinessUploader(BaseVideoUploader):
         return "\n\n".join(parts)
 
     async def _select_publish_location(self, page: Page) -> None:
-        # 发布位置的可访问名称区别于正文和 CTA 的 combobox，不依赖全页顺序。
-        # 发布主体选择器带 Facebook 品牌徽标；CTA 下拉框和正文均没有该徽标。
-        # 中英文实际页面均保留此品牌 alt，避免依赖“发布位置/Post to”的翻译。
+        # The accessible name of the post-to selector sets it apart from the text and CTA comboboxes, without relying on page-wide order.
+        # The post-to selector carries the Facebook brand logo; the CTA dropdown and the text do not.
+        # The real Chinese and English pages both keep this brand alt, which avoids relying on translations of "发布位置/Post to".
         combo = page.locator('[data-surface$="bizweb_create_post:left_panel"] [role="combobox"][aria-haspopup="listbox"]').filter(has=page.locator('img[alt="Facebook"]'))
         await combo.wait_for(state="visible")
         if self.page_name and self.page_name not in await combo.inner_text():
             await combo.click()
             option = page.get_by_role("option", name=self.page_name, exact=True)
             if not await option.count():
-                raise RuntimeError(f"Business Suite 未找到指定发布主体: {self.page_name}")
+                raise RuntimeError(f"Business Suite did not find the requested post-to Page: {self.page_name}")
             await option.click()
         if self.page_name:
             await expect(combo).to_contain_text(self.page_name)
@@ -201,44 +201,44 @@ class MetaBusinessUploader(BaseVideoUploader):
             self.page_name = (await combo.inner_text()).replace('\u200b', '').strip()
         assets = parse_qs(urlparse(page.url).query).get('asset_id', [])
         if len(assets) != 1 or not assets[0].isdigit():
-            raise RuntimeError("无法核实当前 Page asset_id，未提交")
+            raise RuntimeError("Could not verify the current Page asset_id; not submitted")
         self.result.update(page_id=assets[0], page_name=self.page_name, expected_text=self.title)
 
     async def _upload_files(self, page: Page) -> None:
-        # 页面可能保留隐藏的响应式布局；按钮语义及 visible 限定当前实际上传入口。
-        # 空媒体区的业务顺序为本地影音上传、可选 AI 生成；中英文实测分别有 1/2 个入口。
-        # 仅接受空区这两种结构，上传后生成的编辑/移除动作不能混入；不按翻译或图标路径匹配。
+        # The page may keep hidden responsive layouts; button semantics plus visible pin down the real upload entry.
+        # In the empty media area the order is local photo/video upload, then optional AI generation; testing found 1 and 2 entries in Chinese and English respectively.
+        # Accept only these two structures of the empty area; the edit/remove actions that appear after upload must not get mixed in. Do not match by translation or icon path.
         media = page.locator('[data-surface$="lib:bizweb_create_post:media"]')
         await expect(media.locator('img')).to_have_count(0)
         entries = media.get_by_role('button')
         if await entries.count() not in (1, 2):
-            raise RuntimeError('空媒体区结构未识别，未上传')
+            raise RuntimeError('Unrecognised structure of the empty media area; nothing uploaded')
         trigger = entries.nth(0)
         files = [str(self.video_file)] if self.video_file else [str(path) for path in self.image_files]
         async with page.expect_file_chooser() as chooser_info:
             await trigger.click()
         await (await chooser_info.value).set_files(files)
-        # 视频在新版 Business Suite 会进入“创建 Reels”向导，不渲染 video 标签；
-        # 图片则留在原 composer。两种状态都必须等到文件名或向导业务标题出现。
+        # In the new Business Suite a video goes into the "创建 Reels" (Create reel) wizard, which renders no video tag;
+        # images stay in the original composer. Both cases must wait until the file name or the wizard title appears.
         if self.video_file:
             await page.get_by_text(self.video_file.name, exact=True).wait_for(state="visible", timeout=180_000)
-            # 新版 Reel 向导有独立业务 surface；不依赖 Create reel/创建 Reels 标题。
+            # The new Reel wizard has its own surface; do not rely on the Create reel/创建 Reels title.
             await page.locator('[data-surface$="lib:bizweb_create_reel"]').wait_for()
             await dismiss_guidance_cards(page)
             await page.get_by_text('100%', exact=True).wait_for(state='visible', timeout=180000)
         else:
-            # 上传后媒体区生成服务端预览及像素尺寸；不以中文“移除照片”或正文框代表上传完成。
+            # After upload the media area shows a server-side preview with pixel dimensions; the Chinese "移除照片" (Remove photo) or the text box does not mean the upload finished.
             await expect(media.locator('img')).to_have_count(len(files), timeout=180000)
             await expect(media.get_by_text(re.compile(r"^\d+ x \d+$")).filter(visible=True)).to_have_count(len(files), timeout=180000)
 
     async def _fill_caption(self, page: Page) -> None:
-        # Reel 标题为 left_panel 中唯一普通 text input；关键词输入另有 combobox 角色。
+        # The Reel title is the only plain text input in left_panel; the keyword input has a separate combobox role.
         reels_title = page.locator('[data-surface$="bizweb_create_reel:left_panel"] input[type="text"]:not([role]):visible')
         separate_title = self.video_file and await reels_title.count() and await reels_title.is_visible()
         if separate_title:
             await reels_title.fill(self.title)
-        # 实测同名隐藏 textbox 与可见 combobox 并存；只匹配当前向导可见正文，防止误填旧布局。
-        # 当前可见 contenteditable 是正文；隐藏 textbox 属于旧布局，角色会随图文/Reel 改变。
+        # Testing found a hidden textbox and a visible combobox with the same name; match only the wizard's visible text field so the old layout is not filled by mistake.
+        # The visible contenteditable is the text field; the hidden textbox belongs to the old layout, and the role changes between image post and Reel.
         editor = page.locator('[contenteditable="true"]:visible')
         await expect(editor).to_have_count(1)
         await editor.wait_for(state="visible", timeout=30_000)
@@ -249,17 +249,17 @@ class MetaBusinessUploader(BaseVideoUploader):
             caption = self._caption()
         await editor.fill(caption)
         if (await editor.inner_text()).strip() != caption:
-            raise RuntimeError("Business Suite 正文未读回预期内容")
+            raise RuntimeError("Business Suite text field did not read back the expected content")
 
     async def _advance_reels(self, page: Page) -> None:
         if not self.video_file:
             return
         root = page.locator('[data-surface$="lib:bizweb_create_reel"]')
-        # 向导的三个步骤有 aria-labelledby，当前步骤有 aria-current；缩略图切换没有。
+        # The wizard's three steps have aria-labelledby and the current step has aria-current; the thumbnail switcher has neither.
         steps = root.locator('[role="button"][aria-labelledby]:not([aria-haspopup])')
         await expect(steps).to_have_count(3)
-        # 两次下一步都来自 footer，不与缩略图的上/下一张混选；带 aria-label 的是反馈入口。
-        # 已实测创建、编辑、分享三阶段底栏均为返回/取消 + 主动作这两个业务按钮。
+        # Both Next clicks come from the footer, not to be confused with the thumbnails' previous/next; the one with an aria-label is the feedback entry.
+        # Tested: in the create, edit and share steps the footer always has two buttons, Back/Cancel plus the main action.
         for index in (0, 1):
             await expect(steps.nth(index)).to_have_attribute('aria-current', 'step')
             actions = page.locator('[data-surface$="bizweb_create_reel:footer"] [role="button"]:not([aria-label])')
@@ -267,18 +267,18 @@ class MetaBusinessUploader(BaseVideoUploader):
             await expect(actions.nth(1)).to_be_enabled(timeout=180000)
             await actions.nth(1).click()
             await expect(steps.nth(index + 1)).to_have_attribute('aria-current', 'step')
-        # 快拍开关与当前 Page 的 Facebook 徽标属于同一单开关业务组；其余开关没有品牌图片。
+        # The Story switch and the current Page's Facebook logo belong to the same single-switch group; the other switches have no brand image.
         story = page.locator('[data-surface$="bizweb_create_reel:left_panel"] input[role="switch"]').locator(
             'xpath=self::input[ancestor::div[.//img[@alt="Facebook"] and count(.//input[@role="switch"])=1]]')
         await expect(story).to_have_count(1)
         if await story.is_checked():
             await story.click()
-            # Once 是平台真实选项值，只关闭本条快拍分享；Always 会改变后续默认设置。
+            # Once is the platform's real option value and turns off Story sharing for this post only; Always would change the default for later posts.
             dialog = page.get_by_role('dialog').filter(has=page.locator('input[type="radio"][value="Once"]'))
             await expect(dialog).to_have_count(1)
             await dialog.locator('input[value="Once"]').check()
             actions = dialog.get_by_role('button')
-            # 实测确认框三项为关闭、取消、确认；严格核对数量后使用该业务顺序。
+            # Tested: the confirmation box has three items, Close, Cancel and Confirm; use that order only after strictly checking the count.
             await expect(actions).to_have_count(3)
             await actions.nth(2).click()
             await expect(dialog).to_have_count(0)
@@ -287,13 +287,13 @@ class MetaBusinessUploader(BaseVideoUploader):
     async def _fill_schedule(self, page: Page) -> None:
         if not self.schedule:
             return
-        # 此表单按浏览器本地时区解释时间，当前真实验证为 Asia/Shanghai。
+        # This form reads times in the browser's local time zone; it has been verified for real only with Asia/Shanghai.
         zone = await page.evaluate("Intl.DateTimeFormat().resolvedOptions().timeZone")
         if zone != "Asia/Shanghai" or self.schedule.tzinfo is not None:
-            raise ValueError("当前 Meta 定时要求 Asia/Shanghai 浏览器及不带时区的北京时间输入")
+            raise ValueError("Meta scheduling currently requires an Asia/Shanghai browser and a Beijing-time input without a time zone")
         if self.video_file:
             region = page.locator('[data-surface$="bizweb_create_reel:left_panel"]')
-            # 分享阶段的三种发布模式是立即、定时、草稿；其 aria-pressed 表示模式，非提交。
+            # The share step has three publish modes, Now, Schedule and Draft; their aria-pressed marks the mode and is not a submit.
             modes = region.locator('[role="button"][aria-pressed]').locator('xpath=self::*[not(ancestor::*[@role="grid"])]')
             await expect(modes).to_have_count(3)
             await modes.nth(1).click()
@@ -301,33 +301,33 @@ class MetaBusinessUploader(BaseVideoUploader):
         else:
             region = page.locator('[data-surface$="lib:bizweb_create_post:publishing_options"]')
             await region.locator('input[role="switch"]').check()
-        # 日期是定时区唯一有 placeholder 的普通 input；小时/分钟靠语义数值范围区分。
+        # The date is the only plain input with a placeholder in the schedule area; hour and minute are told apart by their value ranges.
         date_input = region.locator('input[placeholder]:not([role])')
         await expect(date_input).to_have_count(1)
         await date_input.click()
         grid = region.locator('[role="grid"][aria-labelledby]')
         await expect(grid).to_have_count(1)
-        # 日历 aria-labelledby 实测含月、年，前缀 js_* 随会话变化，只解析其日期后缀。
+        # Tested: the calendar's aria-labelledby holds month and year; the js_* prefix changes per session, so parse only the date suffix.
         month_id = await grid.get_attribute('aria-labelledby')
         match = re.search(r'-(\d{1,2})-(\d{4})$', month_id or '')
         if not match:
-            raise RuntimeError('无法读取日历的月份/年份，未提交')
+            raise RuntimeError('Could not read the month/year of the calendar; not submitted')
         month, year = map(int, match.groups())
         month_delta = (self.schedule.year - year) * 12 + self.schedule.month - month
         if abs(month_delta) > 12:
-            raise ValueError('定时日期超出已验证日历范围')
-        # 日历非 grid 内的两个按钮分别为上一月/下一月；日按钮属于 gridcell，排除它们。
+            raise ValueError('The scheduled date is outside the verified calendar range')
+        # The two calendar buttons outside the grid are previous month and next month; day buttons are gridcells, which excludes them.
         calendar = grid.locator('xpath=ancestor::div[.//*[@role="button"][@aria-busy]][1]')
         navigation = calendar.locator('[role="button"][aria-busy]')
         await expect(navigation).to_have_count(2)
         for _ in range(abs(month_delta)):
             await navigation.nth(1 if month_delta > 0 else 0).click()
         await expect(grid).to_have_attribute('aria-labelledby', re.compile(fr'-{self.schedule.month}-{self.schedule.year}$'))
-        # 已核对日历年月后按日期数字选择，避免依赖 aria-label 的星期/月名翻译。
+        # With the calendar's year and month checked, pick the day by its number, avoiding translated weekday/month names in aria-label.
         day = grid.get_by_role('button').filter(has_text=re.compile(fr'^{self.schedule.day}$'))
         await expect(day).to_have_count(1)
         if await day.get_attribute('aria-disabled') == 'true':
-            raise ValueError('平台日历不允许选定日期，未提交')
+            raise ValueError('The platform calendar does not allow the chosen date; not submitted')
         await day.click()
         hour = region.locator('[role="spinbutton"][aria-valuemax="23"], [role="spinbutton"][aria-valuemax="12"]')
         await expect(hour).to_have_count(1)
@@ -340,26 +340,26 @@ class MetaBusinessUploader(BaseVideoUploader):
             await control.press('Tab')
             await expect(control).to_have_attribute('aria-valuenow', str(value))
         if twelve_hour:
-            # AM/PM 的真实数值是 0/1；按键切换后读回，拒绝只填小时造成 12 小时偏差。
+            # The real values of AM/PM are 0/1; read it back after toggling with keys, so filling only the hour cannot cause a 12-hour error.
             period = region.locator('[role="spinbutton"][aria-valuemax="1"]')
             target = str(int(self.schedule.hour >= 12))
             if await period.get_attribute('aria-valuenow') != target:
                 await period.press('ArrowUp')
             await expect(period).to_have_attribute('aria-valuenow', target)
-        # 日期控件在中英日页面实测读回均包含年月日数字；允许分隔符本地化，不猜月份名称。
+        # Tested on Chinese, English and Japanese pages: the date control reads back with year, month and day digits; separators may be localised, month names are not guessed.
         parts = [int(part) for part in re.findall(r'\d+', await date_input.input_value())]
         if parts != [self.schedule.year, self.schedule.month, self.schedule.day]:
-            raise RuntimeError(f'日期未读回请求值：{await date_input.input_value()}')
+            raise RuntimeError(f'Date did not read back the requested value: {await date_input.input_value()}')
 
     async def _publish(self, page: Page) -> None:
-        # 图文底栏的业务动作固定为取消、存草稿、最终提交；限定 footer 并严格核对三项，
-        # 只在已观察的布局中采用此业务顺序，布局变化时停止，禁止用全页同名按钮或猜测翻译。
+        # The image post footer always has Cancel, Save draft and the final submit; limit to the footer and strictly check for three items.
+        # Use this order only in the observed layout and stop if the layout changes; never use a same-named button elsewhere on the page or guess translations.
         if not self.video_file:
             actions = page.locator('[data-surface$="lib:bizweb_create_post:footer"] [role="button"]')
             await expect(actions).to_have_count(3)
             button = actions.nth(2)
         else:
-            # 分享阶段仍为返回 + 最终主动作，不能选择顶部 Share 步骤导航。
+            # The share step is still Back plus the final main action; do not pick the Share step in the top navigation.
             actions = page.locator('[data-surface$="bizweb_create_reel:footer"] [role="button"]:not([aria-label])')
             await expect(actions).to_have_count(2)
             button = actions.nth(1)
@@ -367,46 +367,46 @@ class MetaBusinessUploader(BaseVideoUploader):
         self.result['status'] = 'submission_unknown'
         self.result_file.parent.mkdir(parents=True, exist_ok=True)
         self.result_file.write_text(json.dumps(self.result, ensure_ascii=False, indent=2), encoding='utf-8')
-        # 只捕获本次点击触发的创建作品响应；上传素材 ID 和广告建议中的 story ID 都不能代替内容编号。
+        # Capture only the create response triggered by this click; neither the uploaded media ID nor the story ID in ad suggestions can stand in for the content ID.
         async with page.expect_response(lambda response: '/api/graphql' in response.url and
                 parse_qs(response.request.post_data or '').get('fb_api_req_friendly_name') == ['BusinessComposerStoryCreationMutation'], timeout=90000) as response_info:
             await button.click()
         payload = await (await response_info.value).json()
         if payload.get('errors'):
-            raise RuntimeError('平台创建作品响应包含错误；请查原记录，勿重复提交')
+            raise RuntimeError('The platform create response contains an error; look up the original record and do not submit again')
         creation = payload.get('data', {}).get('xfamily_content_create', {})
         if any(creation.get('errors', {}).values()):
-            raise RuntimeError('平台返回作品创建错误；请查原记录，勿重复提交')
+            raise RuntimeError('The platform returned a create error; look up the original record and do not submit again')
         items = creation.get('items')
         if isinstance(items, dict):
             items = [items]
         if not isinstance(items, list) or len(items) != 1:
-            raise RuntimeError('已提交但未取得唯一内容编号；结果待查询')
-        # 实测 Reels 响应的 pending_publish_content_id 为空，需在成功确认后查原作品详情。
+            raise RuntimeError('Submitted, but no unique content ID was obtained; result needs to be looked up')
+        # Tested: pending_publish_content_id in the Reels response is empty, so look up the post details after success is confirmed.
         pending_id = items[0].get('pending_publish_content_id')
         if pending_id:
             self.result['content_id'] = str(pending_id)
         self.result_file.write_text(json.dumps(self.result, ensure_ascii=False, indent=2), encoding='utf-8')
         if self.video_file:
-            # 创建响应后页面仍执行后续发布步骤，不能立即导航走；实测完成框带本次标题、
-            # 作品预览及关闭/完成两个动作。标题是本次业务参数，非某种语言的成功文案。
+            # After the create response the page still runs further publish steps, so do not navigate away at once. Tested: the completion box shows this post's title,
+            # a post preview and two actions, Close/Done. The title is this request's own input, not success text in some language.
             completion = page.locator('[role="dialog"][aria-labelledby][tabindex="-1"]').filter(has_text=self.title)
             await expect(completion).to_have_count(1, timeout=120000)
             await expect(completion.get_by_role('heading')).to_have_count(1)
             await expect(completion.get_by_role('button')).to_have_count(2)
-            # 完成框两个动作均是关闭/完成；点击最后一个代表平台已受理本次 Reel。
+            # Both actions of the completion box are Close/Done; clicking the last one means the platform accepted this Reel.
             await completion.get_by_role('button').last.click()
             await expect(completion).to_have_count(0)
             if not self.schedule:
-                # Reel 创建响应实测可能没有 pending_publish_content_id，作品列表也可能在视频处理期间不展示。
-                # 完成弹窗和无错误的创建响应已经是“提交成功、正在处理”的业务证据；编号只用于后续核验/删除，不能阻断发布结果。
+                # Tested: the Reel create response may lack pending_publish_content_id, and the post list may not show it while the video is processing.
+                # The completion dialog plus an error-free create response are already evidence of "submitted, processing"; the ID is only for later verification/deletion and must not block the publish result.
                 self.result['status'] = 'processing'
                 self.result['schedule'] = None
                 self.result['timezone'] = 'Asia/Shanghai'
                 self.result_file.write_text(json.dumps(self.result, ensure_ascii=False, indent=2), encoding='utf-8')
                 return
-        # 创建响应明确受理后按 Page 和原作品编号查询；不依赖任何语言的成功提示。
-        # 定时作品必须读回排期；图文立即发布必须读回原作品；这两类结果不能只凭弹窗判断。
+        # Once the create response clearly accepts the post, look it up by Page and post ID; do not rely on success text in any language.
+        # A scheduled post must read back its schedule; an image post published now must read back the post; neither result can be judged from a dialog alone.
         from uploader.meta_uploader.facebook_page_uploader.posts import open_meta_post
         state = 'scheduled_posts' if self.schedule else 'published_posts'
         list_url = f'https://business.facebook.com/latest/posts/{state}?asset_id={self.result["page_id"]}'
@@ -428,7 +428,7 @@ class MetaBusinessUploader(BaseVideoUploader):
             )
             try:
                 if await _is_business_logged_out(page):
-                    raise RuntimeError("Business Suite 登录态失效，请先执行对应平台 login")
+                    raise RuntimeError("Business Suite login state is invalid; run login for the matching platform first")
                 await dismiss_guidance_cards(page)
                 await self._select_publish_location(page)
                 await self._upload_files(page)

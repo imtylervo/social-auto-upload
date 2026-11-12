@@ -1,4 +1,4 @@
-"""zhihu 的命令参数与执行逻辑。"""
+"""Command arguments and execution logic for zhihu."""
 from __future__ import annotations
 import json
 from uploader.zhihu_uploader.article import ZhihuArticle
@@ -22,54 +22,54 @@ from sau_commands.arguments import (
 
 
 def register(platform_parsers):
-    """声明本平台命令、参数及合法选项。"""
+    """Declare this platform's commands, arguments and allowed options."""
     schedule_help = SCHEDULE_FORMAT.replace("%", "%%")
-    zhihu_parser = platform_parsers.add_parser("zhihu", help="知乎创作中心文章与视频发布")
+    zhihu_parser = platform_parsers.add_parser("zhihu", help="Zhihu creator center article and video publishing")
     zhihu_actions = zhihu_parser.add_subparsers(dest="action", required=True)
-    zhihu_login = zhihu_actions.add_parser("login", help="在可见 Chrome 中登录并保存本地会话")
-    zhihu_login.add_argument("--account", required=True, help="本地会话别名，可与知乎展示名不同")
-    zhihu_login.add_argument("--timeout", type=int, default=600, help="登录等待秒数")
-    zhihu_check = zhihu_actions.add_parser("check", help="检查知乎登录态和页头账号绑定")
-    zhihu_check.add_argument("--account", required=True, help="本地会话别名")
+    zhihu_login = zhihu_actions.add_parser("login", help="Log in in a visible Chrome and save the local session")
+    zhihu_login.add_argument("--account", required=True, help="Local session alias; may differ from the Zhihu display name")
+    zhihu_login.add_argument("--timeout", type=int, default=600, help="Seconds to wait for login")
+    zhihu_check = zhihu_actions.add_parser("check", help="Check the Zhihu login state and the account binding shown in the page header")
+    zhihu_check.add_argument("--account", required=True, help="Local session alias")
     add_runtime_flags(zhihu_check)
     zhihu_check.set_defaults(headless=False)
-    zhihu_verify = zhihu_actions.add_parser("verify", help="按已保存的作品 URL 只读核对提交结果")
-    zhihu_verify.add_argument("--account", required=True, help="本地会话别名")
+    zhihu_verify = zhihu_actions.add_parser("verify", help="Read-only check of the submission result using the saved post URL")
+    zhihu_verify.add_argument("--account", required=True, help="Local session alias")
     zhihu_verify.add_argument("--result", required=True, type=existing_file_path)
     add_runtime_flags(zhihu_verify)
     zhihu_verify.set_defaults(headless=False)
-    zhihu_article = zhihu_actions.add_parser("upload-article", help="发布知乎文章；正文配图由原稿位置决定")
-    zhihu_article.add_argument("--account", required=True, help="本地会话别名")
-    zhihu_article.add_argument("--title", required=True, help="文章标题，最多 100 字")
-    zhihu_article.add_argument("--content-file", required=True, type=existing_file_path, help="UTF-8 HTML/Markdown/TXT，图片路径写在原稿对应段落中")
+    zhihu_article = zhihu_actions.add_parser("upload-article", help="Publish a Zhihu article; content images go where they are placed in the draft")
+    zhihu_article.add_argument("--account", required=True, help="Local session alias")
+    zhihu_article.add_argument("--title", required=True, help="Article title, at most 100 characters")
+    zhihu_article.add_argument("--content-file", required=True, type=existing_file_path, help="UTF-8 HTML/Markdown/TXT; write image paths in the matching paragraphs of the draft")
     zhihu_article.add_argument("--schedule", type=schedule_value,
-                               help=f"实验性定时发布，格式 {schedule_help}，北京时间 {ZHIHU_SCHEDULE_MINUTES} 分钟后至 {ZHIHU_SCHEDULE_MAX_HOURS} 小时内")
-    zhihu_article.add_argument("--prepare-only", action="store_true", help="填写并检查编辑器后结束，不点击发布")
-    zhihu_article.add_argument("--upload-timeout", type=int, default=600, help="每张正文图片上传等待秒数")
+                               help=f"Experimental scheduled publishing, format {schedule_help}, Beijing time, {ZHIHU_SCHEDULE_MINUTES} minutes to {ZHIHU_SCHEDULE_MAX_HOURS} hours from now")
+    zhihu_article.add_argument("--prepare-only", action="store_true", help="Stop after filling in and checking the editor, without clicking publish")
+    zhihu_article.add_argument("--upload-timeout", type=int, default=600, help="Seconds to wait for each content image upload")
     add_runtime_flags(zhihu_article)
     zhihu_article.set_defaults(headless=False)
-    zhihu_video = zhihu_actions.add_parser("upload-video", help="上传并发布一个知乎视频")
-    zhihu_video.add_argument("--account", required=True, help="本地会话别名")
-    zhihu_video.add_argument("--file", required=True, type=existing_file_path, help="视频文件，大于 100KB、最大 20GB、最长 4 小时")
-    zhihu_video.add_argument("--title", required=True, help="视频标题，5–50 字")
-    zhihu_video.add_argument("--desc", default="", help="可选视频简介，最多 300 字")
+    zhihu_video = zhihu_actions.add_parser("upload-video", help="Upload and publish one Zhihu video")
+    zhihu_video.add_argument("--account", required=True, help="Local session alias")
+    zhihu_video.add_argument("--file", required=True, type=existing_file_path, help="Video file, larger than 100KB, at most 20GB and 4 hours long")
+    zhihu_video.add_argument("--title", required=True, help="Video title, 5–50 characters")
+    zhihu_video.add_argument("--desc", default="", help="Optional video description, at most 300 characters")
     zhihu_video.add_argument("--category", choices=ZHIHU_VIDEO_CATEGORIES,
-                             help="所属领域；省略时在终端按编号选择，提交前核对实时菜单")
+                             help="Field (topic area); when omitted, choose it by number in the terminal; checked against the live menu before submitting")
     zhihu_video.add_argument("--video-mark", choices=ZHIHU_VIDEO_MARKS,
-                             help="视频声明；省略时在终端按编号选择")
-    zhihu_video.add_argument("--show-options", action="store_true", help="上传素材后列出全部领域和视频标记，保存到结果 JSON 后退出，不发布")
+                             help="Video declaration; when omitted, choose it by number in the terminal")
+    zhihu_video.add_argument("--show-options", action="store_true", help="After uploading the media, list all fields and video marks, save them to the result JSON and exit without publishing")
     zhihu_video.add_argument("--originality", choices=ZHIHU_ORIGINALITY, required=True,
-                             help="内容为原创或转载")
+                             help="Whether the content is original or a repost")
     zhihu_video.add_argument("--schedule", type=schedule_value,
-                             help=f"实验性定时发布，格式 {schedule_help}，北京时间 {ZHIHU_SCHEDULE_MINUTES} 分钟后至 {ZHIHU_SCHEDULE_MAX_HOURS} 小时内")
-    zhihu_video.add_argument("--prepare-only", action="store_true", help="上传并填写后结束，不点击发布")
-    zhihu_video.add_argument("--upload-timeout", type=int, default=1200, help="视频上传等待秒数")
+                             help=f"Experimental scheduled publishing, format {schedule_help}, Beijing time, {ZHIHU_SCHEDULE_MINUTES} minutes to {ZHIHU_SCHEDULE_MAX_HOURS} hours from now")
+    zhihu_video.add_argument("--prepare-only", action="store_true", help="Stop after uploading and filling in, without clicking publish")
+    zhihu_video.add_argument("--upload-timeout", type=int, default=1200, help="Seconds to wait for the video upload")
     add_runtime_flags(zhihu_video)
     zhihu_video.set_defaults(headless=False)
 
 
 async def run(args):
-    """执行本平台命令；发布结果由平台实现核验。"""
+    """Run this platform's command; the platform implementation verifies the publish result."""
     account_file = resolve_account_file("zhihu", args.account)
     if args.action == "login":
         result = await login_zhihu_account(account_file, args.timeout)

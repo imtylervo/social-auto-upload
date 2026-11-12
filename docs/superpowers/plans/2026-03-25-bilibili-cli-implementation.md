@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为 Bilibili 补齐和抖音、快手同层级的 `sau` CLI、自动更新 `biliup` 的运行时机制、对应 skill，以及完整文档与上游致谢说明。
+**Goal:** Give Bilibili the same level of `sau` CLI as Douyin and Kuaishou, a runtime mechanism that updates `biliup` automatically, the matching skill, and complete docs with an upstream acknowledgement.
 
-**Architecture:** 保持轻量，不新建大而全框架。新增一个 Bilibili 运行时模块负责检查 GitHub Release、下载/更新 `biliup`、执行命令；`sau_cli.py` 仅补 `bilibili` 子命令和参数映射；skill、example、README/CLI/install/update 文档按现有 Douyin/Kuaishou 结构对齐。
+**Architecture:** Keep it lightweight and do not build a large all-purpose framework. Add one Bilibili runtime module that checks GitHub Release, downloads/updates `biliup` and runs commands. `sau_cli.py` only gets the `bilibili` subcommand and option mapping. The skill, example and README/CLI/install/update docs are aligned with the existing Douyin/Kuaishou structure.
 
 **Tech Stack:** Python 3.10+, `requests`, `argparse`, `asyncio`, `subprocess`, `pathlib`, `unittest`, GitHub Releases, existing `biliup` integration
 
@@ -15,54 +15,54 @@
 ### New files
 
 - `uploader/bilibili_uploader/runtime.py`
-  - Bilibili 运行时入口
-  - 负责 `biliup` 自动检查、自动下载、自动更新、执行命令
+  - Bilibili runtime entry
+  - Handles the automatic check, download and update of `biliup`, and runs commands
 - `tests/__init__.py`
-  - 测试包初始化
+  - Test package init
 - `tests/test_bilibili_runtime.py`
-  - 测试自动更新、下载、缓存复用、执行器行为
+  - Tests automatic update, download, cache reuse and runner behavior
 - `tests/test_sau_bilibili_cli.py`
-  - 测试 `sau bilibili` parser 和 dispatch 行为
+  - Tests the `sau bilibili` parser and dispatch behavior
 - `skills/bilibili-upload/SKILL.md`
-  - Bilibili CLI skill 主说明
+  - Main description of the Bilibili CLI skill
 - `skills/bilibili-upload/references/runtime-requirements.md`
-  - 运行前提和自动下载说明
+  - Runtime prerequisites and automatic download notes
 - `skills/bilibili-upload/references/cli-contract.md`
-  - `sau bilibili ...` 命令契约
+  - The `sau bilibili ...` command contract
 - `skills/bilibili-upload/references/troubleshooting.md`
-  - 常见问题与排障
-  - PowerShell 示例命令
-  - shell 示例命令
-  - Python 调用模板
+  - Common problems and troubleshooting
+  - PowerShell example commands
+  - Shell example commands
+  - Python call template
 
 ### Modified files
 
 - `sau_cli.py`
-  - 补 `bilibili` 子命令
-  - 复用现有 `resolve_account_file()`、`parse_tags()`、`parse_schedule()`
+  - Add the `bilibili` subcommand
+  - Reuse the existing `resolve_account_file()`, `parse_tags()` and `parse_schedule()`
 - `examples/get_bilibili_cookie.py`
-  - 对齐新的 `sau bilibili login` 用法
+  - Align with the new `sau bilibili login` usage
 - `examples/upload_video_to_bilibili.py`
-  - 对齐新的 CLI/账号文件约定
+  - Align with the new CLI/account file conventions
 - `README.md`
-  - 补 Bilibili CLI 用法、自动下载说明、致谢说明
+  - Add Bilibili CLI usage, automatic download notes and the acknowledgement
 - `docs/CLI.md`
-  - 补 `sau bilibili login/check/upload-video`
+  - Add `sau bilibili login/check/upload-video`
 - `docs/install.md`
-  - 补 Bilibili 自动下载/首次运行说明
+  - Add Bilibili automatic download / first-run notes
 - `docs/update.md`
-  - 补 Bilibili 自动更新行为说明
+  - Add Bilibili automatic update behavior notes
 
-## Task 1: Bilibili 自动更新运行时
+## Task 1: Bilibili auto-update runtime
 
 **Files:**
 - Create: `uploader/bilibili_uploader/runtime.py`
 - Create: `tests/__init__.py`
 - Create: `tests/test_bilibili_runtime.py`
 
-- [ ] **Step 1: 写 Bilibili 运行时测试**
+- [ ] **Step 1: Write the Bilibili runtime tests**
 
-使用 `unittest`，覆盖这些最小路径：
+Use `unittest` and cover these minimal paths:
 
 ```python
 import unittest
@@ -111,7 +111,7 @@ class BiliupRuntimeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
 ```
 
-- [ ] **Step 2: 运行测试，确认先失败**
+- [ ] **Step 2: Run the tests and confirm they fail first**
 
 Run:
 
@@ -121,11 +121,11 @@ Run:
 
 Expected:
 
-- 因为 `uploader.bilibili_uploader.runtime` 还不存在而失败
+- Fails because `uploader.bilibili_uploader.runtime` does not exist yet
 
-- [ ] **Step 3: 写最小运行时实现**
+- [ ] **Step 3: Write the minimal runtime implementation**
 
-在 `uploader/bilibili_uploader/runtime.py` 里先补这些最小函数：
+First add these minimal functions to `uploader/bilibili_uploader/runtime.py`:
 
 ```python
 def get_biliup_runtime_root() -> Path: ...
@@ -138,14 +138,14 @@ def ensure_biliup_binary(force_check: bool = True) -> Path: ...
 def run_biliup_command(arguments: list[str]) -> subprocess.CompletedProcess[str]: ...
 ```
 
-约束：
+Constraints:
 
-- 不引入复杂 manifest
-- 直接面向 GitHub Release 最新版本
-- 本地只保存当前版本字符串和二进制
-- 保持简单的路径/网络/替换逻辑
+- Do not introduce a complex manifest
+- Target the latest GitHub Release directly
+- Store only the current version string and the binary locally
+- Keep the path/network/replacement logic simple
 
-- [ ] **Step 4: 再跑运行时测试，确认通过**
+- [ ] **Step 4: Run the runtime tests again and confirm they pass**
 
 Run:
 
@@ -155,16 +155,16 @@ Run:
 
 Expected:
 
-- 所有 `BiliupRuntimeTests` 通过
+- All `BiliupRuntimeTests` pass
 
-- [ ] **Step 5: 提交这一小步**
+- [ ] **Step 5: Commit this small step**
 
 ```powershell
 git add uploader/bilibili_uploader/runtime.py tests/__init__.py tests/test_bilibili_runtime.py
 git commit -m "feat: add biliup runtime bootstrap"
 ```
 
-## Task 2: 接入 `sau bilibili` CLI
+## Task 2: Connect the `sau bilibili` CLI
 
 **Files:**
 - Modify: `sau_cli.py`
@@ -172,9 +172,9 @@ git commit -m "feat: add biliup runtime bootstrap"
 - Reference: `uploader/bilibili_uploader/main.py`
 - Reference: `utils/constant.py`
 
-- [ ] **Step 1: 写 CLI parser 和 dispatch 测试**
+- [ ] **Step 1: Write the CLI parser and dispatch tests**
 
-在 `tests/test_sau_bilibili_cli.py` 中覆盖：
+Cover these in `tests/test_sau_bilibili_cli.py`:
 
 ```python
 import unittest
@@ -210,7 +210,7 @@ class BilibiliCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
 ```
 
-- [ ] **Step 2: 运行测试，确认先失败**
+- [ ] **Step 2: Run the tests and confirm they fail first**
 
 Run:
 
@@ -220,11 +220,11 @@ Run:
 
 Expected:
 
-- 因为 `sau_cli.py` 里还没有 `bilibili` parser/dispatch 分支而失败
+- Fails because `sau_cli.py` does not have the `bilibili` parser/dispatch branches yet
 
-- [ ] **Step 3: 在 `sau_cli.py` 中补 Bilibili 请求模型和命令**
+- [ ] **Step 3: Add the Bilibili request model and commands in `sau_cli.py`**
 
-只做最小接入，保持和 Douyin/Kuaishou 同风格：
+Do only the minimal wiring and keep the same style as Douyin/Kuaishou:
 
 ```python
 @dataclass(slots=True)
@@ -244,27 +244,27 @@ async def check_bilibili_account(account_name: str) -> bool: ...
 async def upload_bilibili_video(request: BilibiliVideoUploadRequest) -> Path: ...
 ```
 
-Parser 最小要求：
+Minimum parser requirements:
 
 - `sau bilibili login --account <name>`
 - `sau bilibili check --account <name>`
 - `sau bilibili upload-video --account ... --file ... --title ... --desc ... --tid ... [--tags] [--schedule]`
 
-Dispatch 最小要求：
+Minimum dispatch requirements:
 
-- 和其他平台一样输出 `valid` / `invalid`
-- 上传成功后打印简洁摘要
+- Print `valid` / `invalid` like the other platforms
+- Print a short summary after a successful upload
 
-- [ ] **Step 4: 复用现有 B 站参数语义**
+- [ ] **Step 4: Reuse the existing Bilibili option semantics**
 
-在 Bilibili wrapper 中直接沿用现有工程概念：
+In the Bilibili wrapper, reuse the existing project concepts directly:
 
-- `tid` 必填
-- `tags` 用现有 `parse_tags()`
-- `schedule` 沿用现有 `parse_schedule()`
-- `account` 仍通过 `resolve_account_file("bilibili", account_name)` 得到项目内账号路径
+- `tid` is required
+- `tags` uses the existing `parse_tags()`
+- `schedule` reuses the existing `parse_schedule()`
+- `account` still gets the in-project account path through `resolve_account_file("bilibili", account_name)`
 
-- [ ] **Step 5: 再跑 CLI 测试，确认通过**
+- [ ] **Step 5: Run the CLI tests again and confirm they pass**
 
 Run:
 
@@ -274,9 +274,9 @@ Run:
 
 Expected:
 
-- `BilibiliCliTests` 通过
+- `BilibiliCliTests` pass
 
-- [ ] **Step 6: 做一次联测**
+- [ ] **Step 6: Do an integration check**
 
 Run:
 
@@ -287,17 +287,17 @@ Run:
 
 Expected:
 
-- 能看到 `login` / `check` / `upload-video`
-- `upload-video` 中 `--tid` 显示为必填
+- `login` / `check` / `upload-video` are visible
+- `--tid` is shown as required in `upload-video`
 
-- [ ] **Step 7: 提交这一小步**
+- [ ] **Step 7: Commit this small step**
 
 ```powershell
 git add sau_cli.py tests/test_sau_bilibili_cli.py
 git commit -m "feat: add bilibili cli commands"
 ```
 
-## Task 3: 补 skill 和 example
+## Task 3: Add the skill and the example
 
 **Files:**
 - Create: `skills/bilibili-upload/SKILL.md`
@@ -307,38 +307,38 @@ git commit -m "feat: add bilibili cli commands"
 - Modify: `examples/get_bilibili_cookie.py`
 - Modify: `examples/upload_video_to_bilibili.py`
 
-- [ ] **Step 1: 参考 Douyin/Kuaishou skill 结构搭出 Bilibili skill**
+- [ ] **Step 1: Build the Bilibili skill on the Douyin/Kuaishou skill structure**
 
-要求：
+Requirements:
 
-- `SKILL.md` 风格和现有两个 skill 对齐
-- 默认优先用 `sau bilibili ...`
-- 明确写“程序会自动准备 `biliup`”
+- The `SKILL.md` style matches the two existing skills
+- Prefer `sau bilibili ...` by default
+- State clearly that "the program prepares `biliup` automatically"
 
-- [ ] **Step 2: 写示例命令文件**
+- [ ] **Step 2: Write the example command file**
 
-示例命令至少包括：
+The example commands should include at least:
 
 ```powershell
 sau bilibili login --account creator
 sau bilibili check --account creator
-sau bilibili upload-video --account creator --file .\videos\demo.mp4 --title "demo" --desc "demo" --tid 249 --tags 足球,测试
+sau bilibili upload-video --account creator --file .\videos\demo.mp4 --title "demo" --desc "demo" --tid 249 --tags football,test
 ```
 
-- [ ] **Step 3: 修改本地 example**
+- [ ] **Step 3: Change the local examples**
 
-让以下 example 明确转向新入口或新约定：
+Make these examples clearly move to the new entry or the new conventions:
 
 - `examples/get_bilibili_cookie.py`
 - `examples/upload_video_to_bilibili.py`
 
-要求：
+Requirements:
 
-- 不再让用户手动猜 `biliup.exe` 路径
-- 明确说明现在推荐走 `sau bilibili ...`
-- 继续保留 `VideoZoneTypes` 的使用示例
+- Stop making users guess the `biliup.exe` path by hand
+- State clearly that `sau bilibili ...` is now the recommended path
+- Keep the `VideoZoneTypes` usage example
 
-- [ ] **Step 4: 做一次文件级自检**
+- [ ] **Step 4: Do a file-level self-check**
 
 Run:
 
@@ -350,17 +350,17 @@ Get-Content examples\upload_video_to_bilibili.py
 
 Expected:
 
-- Bilibili skill 目录完整
-- example 内容已切到新的 CLI/说明
+- The Bilibili skill directory is complete
+- The example content has moved to the new CLI/description
 
-- [ ] **Step 5: 提交这一小步**
+- [ ] **Step 5: Commit this small step**
 
 ```powershell
 git add skills/bilibili-upload examples/get_bilibili_cookie.py examples/upload_video_to_bilibili.py
 git commit -m "feat: add bilibili upload skill"
 ```
 
-## Task 4: 补文档与上游致谢
+## Task 4: Add docs and the upstream acknowledgement
 
 **Files:**
 - Modify: `README.md`
@@ -368,51 +368,51 @@ git commit -m "feat: add bilibili upload skill"
 - Modify: `docs/install.md`
 - Modify: `docs/update.md`
 
-- [ ] **Step 1: 在 README 中补 Bilibili CLI 用法**
+- [ ] **Step 1: Add the Bilibili CLI usage to the README**
 
-至少写清：
+State at least:
 
 - `sau bilibili login`
 - `sau bilibili check`
 - `sau bilibili upload-video`
-- 自动下载/自动更新 `biliup`
+- Automatic download / automatic update of `biliup`
 
-- [ ] **Step 2: 在 CLI 文档中补命令契约**
+- [ ] **Step 2: Add the command contract to the CLI docs**
 
-把 Bilibili 一节写成和 Douyin/Kuaishou 同风格：
+Write the Bilibili section in the same style as Douyin/Kuaishou:
 
-- 参数表
-- `tid` 必填
-- `schedule` 的行为
+- Option table
+- `tid` is required
+- The behavior of `schedule`
 
-- [ ] **Step 3: 在安装/更新文档中写清自动下载机制**
+- [ ] **Step 3: Explain the automatic download mechanism in the install/update docs**
 
-至少补这些说明：
+Add at least these notes:
 
-- 用户不需要自己安装 `biliup`
-- 第一次运行会自动下载
-- 后续运行会自动检查更新
+- Users do not need to install `biliup` themselves
+- The first run downloads it automatically
+- Later runs check for updates automatically
 
-- [ ] **Step 4: 在文档中加入对上游项目的感谢与借用说明**
+- [ ] **Step 4: Add thanks to the upstream project and a note about what is borrowed**
 
-至少在 README 中补一段明确说明：
+Add a clear statement in the README, at least:
 
-- Bilibili 能力基于 `biliup`
-- 感谢/借用上游项目
-- 给出项目地址
+- The Bilibili capability is based on `biliup`
+- Thanks to / reuse of the upstream project
+- The project address
 
-建议文案：
+Suggested wording:
 
 ```markdown
-## 致谢
+## Acknowledgements
 
-本项目的 Bilibili 上传能力基于开源项目 `biliup` 的能力进行接入与封装。
-感谢 `biliup` 项目及其贡献者提供的基础能力：
+The Bilibili upload capability of this project is integrated and wrapped on top of the open-source project `biliup`.
+Thanks to the `biliup` project and its contributors for the foundation:
 
 - https://github.com/biliup/biliup
 ```
 
-- [ ] **Step 5: 做一次文档核对**
+- [ ] **Step 5: Check the docs**
 
 Run:
 
@@ -425,10 +425,10 @@ Get-Content docs\update.md | Select-String -Pattern "bilibili|biliup" -Context 1
 
 Expected:
 
-- README、CLI、install、update 都出现 Bilibili 新内容
-- README 里有明确的上游致谢
+- The README, CLI, install and update docs all contain the new Bilibili content
+- The README has a clear upstream acknowledgement
 
-- [ ] **Step 6: 跑最终验证**
+- [ ] **Step 6: Run the final verification**
 
 Run:
 
@@ -440,11 +440,11 @@ Run:
 
 Expected:
 
-- 单元测试通过
-- Bilibili CLI 帮助可用
-- `upload-video` 显示必填 `--tid`
+- The unit tests pass
+- The Bilibili CLI help works
+- `upload-video` shows `--tid` as required
 
-- [ ] **Step 7: 提交收尾**
+- [ ] **Step 7: Commit the wrap-up**
 
 ```powershell
 git add README.md docs/CLI.md docs/install.md docs/update.md

@@ -39,7 +39,7 @@ def _msg(emoji: str, text: str) -> str:
 
 
 async def _dump_page_debug(page, tag: str) -> str:
-    """出错时保存整页截图 + 当前 HTML，返回保存目录，便于对照新 DOM 修选择器。"""
+    """On error, save a full-page screenshot plus the current HTML and return the folder, so selectors can be fixed against the new DOM."""
     import time
     base = Path("ks_debug")
     base.mkdir(parents=True, exist_ok=True)
@@ -56,23 +56,23 @@ async def _dump_page_debug(page, tag: str) -> str:
 
 
 async def _focus_desc_editor(page) -> None:
-    """定位并聚焦快手发布页的『描述』编辑区。
+    """Find and focus the 『描述』 (description) editor on the Kuaishou publish page.
 
-    快手创作者中心 DOM 时有改版，旧的
+    The Kuaishou creator center DOM changes from time to time. The old
         get_by_text("描述").locator("xpath=following-sibling::div")
-    一旦结构变化就会干等 30s 超时。这里按多种策略依次尝试（都锚定在「描述」
-    标签附近，避免误点到标题框），每种短超时快速失败；全部失败则保存截图/HTML
-    供排查后抛出明确错误，而不是无脑超时。
+    waits 30s for a timeout as soon as the structure changes. Here several strategies are tried in turn (all anchored near the 「描述」 (description)
+    label, so the title box is not clicked by mistake), each failing fast on a short timeout; if all fail, save a screenshot/HTML
+    for debugging and raise a clear error instead of just timing out.
     """
-    label = page.get_by_text("描述")  # 默认子串匹配，"作品描述" 等也能命中
+    label = page.get_by_text("描述")  # substring match by default, so "作品描述" (work description) and similar also match
     strategies = [
-        # 旧结构：『描述』相邻 div
+        # Old structure: the div next to 『描述』 (description)
         lambda: label.locator("xpath=following-sibling::div"),
-        # 新版描述区通常是紧随其后的富文本可编辑区
+        # In the new version, the description area is usually the rich-text editable area right after it
         lambda: label.locator("xpath=following::div[@contenteditable='true'][1]"),
-        # 同容器内的可编辑区
+        # Editable area in the same container
         lambda: label.locator("xpath=ancestor::*[1]//div[@contenteditable='true'][1]"),
-        # 兜底：其后第一个任意可编辑元素
+        # Fallback: the first editable element of any kind after it
         lambda: label.locator("xpath=following::*[@contenteditable='true'][1]"),
     ]
     last_err = None
@@ -83,14 +83,14 @@ async def _focus_desc_editor(page) -> None:
             await loc.click(force=True)
             if i > 0:
                 kuaishou_logger.warning(_msg(
-                    "⚠️", f"描述区改用回退策略#{i}定位成功（快手可能已改版，建议核对选择器）"))
+                    "⚠️", f"Found the description area with fallback strategy #{i} (Kuaishou may have changed; check the selectors)"))
             return
         except Exception as e:  # noqa: BLE001
             last_err = e
     dbg = await _dump_page_debug(page, "desc_not_found")
     raise RuntimeError(
-        f"未能定位快手『描述』编辑区（疑似发布页改版）。已保存截图/HTML 到 {dbg}，"
-        f"请据此更新选择器。最后错误: {last_err}")
+        f"Could not find the Kuaishou 『描述』 (description) editor (the publish page has probably changed). Saved a screenshot/HTML to {dbg}; "
+        f"update the selectors from it. Last error: {last_err}")
 
 
 async def _click_visible_publish_confirm(page: Page) -> bool:
@@ -101,7 +101,7 @@ async def _click_visible_publish_confirm(page: Page) -> bool:
 
     primary_button = modal.locator("button.ant-btn-primary:visible").first
     if not await primary_button.count():
-        raise RuntimeError("快手发布确认弹窗已显示，但未找到可点击的主按钮")
+        raise RuntimeError("The Kuaishou publish confirmation dialog is showing, but no clickable primary button was found")
 
     await primary_button.click(timeout=8000)
     return True
@@ -113,7 +113,7 @@ def _print_ks_qrcode(qrcode_content: str, qrcode_path: Path) -> None:
     except TypeError as exc:
         if "unexpected keyword argument 'compact'" not in str(exc):
             raise
-        kuaishou_logger.warning(_msg("😵", "检测到旧版二维码打印函数，小人切回兼容模式继续登录"))
+        kuaishou_logger.warning(_msg("😵", "Old QR code print function detected; switching to compatibility mode to continue login"))
         print_terminal_qrcode(qrcode_content, qrcode_path, "快手APP")
 
 
@@ -173,7 +173,7 @@ async def _extract_ks_qrcode_src(page: Page) -> str:
 
     qrcode_src = await qrcode_img.get_attribute("src")
     if not qrcode_src:
-        raise RuntimeError("未获取到快手登录二维码地址")
+        raise RuntimeError("Could not get the Kuaishou login QR code URL")
 
     return qrcode_src
 
@@ -184,14 +184,14 @@ async def _save_ks_qrcode(page: Page, account_file: str, previous_qrcode_path: P
 
     if previous_qrcode_path and previous_qrcode_path != qrcode_path:
         if remove_qrcode_file(previous_qrcode_path):
-            kuaishou_logger.info(_msg("🧹", f"临时二维码文件已清理: {previous_qrcode_path}"))
+            kuaishou_logger.info(_msg("🧹", f"Temporary QR code file removed: {previous_qrcode_path}"))
 
-    kuaishou_logger.info(_msg("🖼️", f"二维码已经准备好啦，已保存到: {qrcode_path}"))
+    kuaishou_logger.info(_msg("🖼️", f"QR code is ready, saved to: {qrcode_path}"))
     qrcode_content = decode_qrcode_from_path(qrcode_path)
     if qrcode_content:
         _print_ks_qrcode(qrcode_content, qrcode_path)
     else:
-        kuaishou_logger.warning(_msg("😵", f"终端没法完整显示二维码，请打开 {qrcode_path} 扫码"))
+        kuaishou_logger.warning(_msg("😵", f"The terminal cannot show the whole QR code; open {qrcode_path} and scan it"))
 
     qrcode_info = {
         "image_path": str(qrcode_path),
@@ -234,33 +234,33 @@ async def cookie_auth(account_file):
             await page.goto(KUAISHOU_UPLOAD_URL)
             await page.wait_for_timeout(3000)
 
-            # 检查是否被重定向到登录页
+            # Check whether we were redirected to the login page
             if "passport.kuaishou.com" in page.url:
-                kuaishou_logger.info(_msg("🥹", "cookie 已失效（跳到登录页）"))
+                kuaishou_logger.info(_msg("🥹", "Cookie is invalid (redirected to the login page)"))
                 return False
 
-            # 检查是否停留在介绍页（未登录状态显示"立即登录"按钮）
+            # Check whether we stayed on the intro page (when logged out it shows a "立即登录" (Log in now) button)
             login_btn = page.get_by_text("立即登录")
             if await login_btn.count() > 0:
-                kuaishou_logger.info(_msg("🥹", "cookie 已失效（介绍页）"))
+                kuaishou_logger.info(_msg("🥹", "Cookie is invalid (intro page)"))
                 return False
 
-            # 正向证明：上传按钮存在 = 真正已登录
+            # Positive proof: the upload button exists = really logged in
             try:
                 upload_btn = page.locator("button[class^='_upload-btn']")
                 await upload_btn.wait_for(state="visible", timeout=10000)
-                kuaishou_logger.success(_msg("🥳", "cookie 有效"))
+                kuaishou_logger.success(_msg("🥳", "Cookie is valid"))
                 return True
             except Exception:
-                # 兜底：旧版检测（"机构服务"元素出现在未登录介绍页）
+                # Fallback: the old check (the "机构服务" (Agency services) element appears on the logged-out intro page)
                 if await _is_ks_cookie_invalid(page):
-                    kuaishou_logger.info(_msg("🥹", "cookie 已失效（机构服务页）"))
+                    kuaishou_logger.info(_msg("🥹", "Cookie is invalid (agency services page)"))
                     return False
-                # 都没命中：保守判定为失效，避免假阳性
-                kuaishou_logger.warning(_msg("😵", "无法确认 cookie 有效性，按失效处理"))
+                # Nothing matched: to be safe, treat it as invalid and avoid a false positive
+                kuaishou_logger.warning(_msg("😵", "Cannot confirm the cookie is valid; treating it as invalid"))
                 return False
         except Exception as exc:
-            kuaishou_logger.warning(_msg("😵", f"cookie 校验时出错，按失效处理: {exc}"))
+            kuaishou_logger.warning(_msg("😵", f"Error while checking the cookie, treating it as invalid: {exc}"))
             return False
         finally:
             await browser.close()
@@ -272,7 +272,7 @@ async def ks_setup(account_file, handle=False, return_detail=False, qrcode_callb
         if not handle:
             result = _build_login_result(False, "cookie_invalid", "cookie文件不存在或已失效", account_file)
             return result if return_detail else False
-        kuaishou_logger.info(_msg("🥹", "cookie 失效了，准备重新登录快手创作者平台"))
+        kuaishou_logger.info(_msg("🥹", "Cookie is invalid; logging in to the Kuaishou creator platform again"))
         result = await get_ks_cookie(account_file, qrcode_callback=qrcode_callback, headless=headless, cdp_url=cdp_url)
         return result if return_detail else result["success"]
 
@@ -289,7 +289,7 @@ async def get_ks_cookie(
     cdp_url: str | None = None,
 ):
     if headless:
-        kuaishou_logger.info(_msg("🖼️", "快手登录将以无头模式运行，小人会输出终端二维码并保存本地二维码图片"))
+        kuaishou_logger.info(_msg("🖼️", "Kuaishou login runs headless; the QR code will be printed in the terminal and saved as a local image"))
 
     async with async_playwright() as playwright:
         if cdp_url:
@@ -310,7 +310,7 @@ async def get_ks_cookie(
         try:
             page = await context.new_page()
             await page.goto(KUAISHOU_LOGIN_URL)
-            kuaishou_logger.info(_msg("🧍", "请在浏览器里扫码登录快手，小人正在耐心等待"))
+            kuaishou_logger.info(_msg("🧍", "Scan the QR code in the browser to log in to Kuaishou; waiting"))
 
             qrcode_info = await _save_ks_qrcode(page, account_file, qrcode_callback=qrcode_callback)
             qrcode_path = Path(qrcode_info["image_path"])
@@ -319,10 +319,10 @@ async def get_ks_cookie(
                 if page.url.startswith(KUAISHOU_UPLOAD_URL) or await _is_ks_login_page_gone(page):
                     await context.storage_state(path=account_file)
                     if await cookie_auth(account_file):
-                        kuaishou_logger.success(_msg("🥳", "快手扫码登录成功，小人开心收工"))
+                        kuaishou_logger.success(_msg("🥳", "Kuaishou QR-code login succeeded, all done"))
                         result = _build_login_result(True, "success", "快手扫码登录成功", account_file, qrcode_info, page.url)
                     else:
-                        kuaishou_logger.error(_msg("😢", "快手扫码完成了，但 cookie 校验失败"))
+                        kuaishou_logger.error(_msg("😢", "Kuaishou QR code scanned, but the cookie check failed"))
                         result = _build_login_result(
                             False,
                             "cookie_invalid",
@@ -334,7 +334,7 @@ async def get_ks_cookie(
                     return result
 
                 if qrcode_info and await _is_ks_qrcode_expired(page):
-                    kuaishou_logger.warning(_msg("😵", "二维码失效了，小人马上去刷新"))
+                    kuaishou_logger.warning(_msg("😵", "QR code expired; refreshing it"))
                     refresh_button = page.locator("p.qrcode-refresh").first
                     if await refresh_button.count():
                         await refresh_button.click()
@@ -361,9 +361,9 @@ async def get_ks_cookie(
             result = _build_login_result(False, "failed", str(exc), account_file, current_url=page.url if "page" in locals() else "")
         finally:
             if remove_qrcode_file(qrcode_path):
-                kuaishou_logger.info(_msg("🧹", f"临时二维码文件已清理: {qrcode_path}"))
+                kuaishou_logger.info(_msg("🧹", f"Temporary QR code file removed: {qrcode_path}"))
             if not result["success"]:
-                kuaishou_logger.error(_msg("😢", f"登录失败: {result['message']}"))
+                kuaishou_logger.error(_msg("😢", f"Login failed: {result['message']}"))
             if should_close_context:
                 await context.close()
             await browser.close()
@@ -390,9 +390,9 @@ class KSBaseUploader(BaseVideoUploader):
 
     async def validate_base_args(self):
         if not os.path.exists(self.account_file):
-            raise RuntimeError(f"cookie文件不存在，请先完成快手登录: {self.account_file}")
+            raise RuntimeError(f"Cookie file does not exist; log in to Kuaishou first: {self.account_file}")
         if not await cookie_auth(self.account_file):
-            raise RuntimeError(f"cookie文件已失效，请先完成快手登录: {self.account_file}")
+            raise RuntimeError(f"Cookie file is no longer valid; log in to Kuaishou first: {self.account_file}")
 
         if self.publish_strategy is None:
             self.publish_strategy = (
@@ -405,7 +405,7 @@ class KSBaseUploader(BaseVideoUploader):
             KUAISHOU_PUBLISH_STRATEGY_IMMEDIATE,
             KUAISHOU_PUBLISH_STRATEGY_SCHEDULED,
         }:
-            raise ValueError(f"不支持的发布策略: {self.publish_strategy}")
+            raise ValueError(f"Unsupported publish strategy: {self.publish_strategy}")
 
         if self.publish_strategy == KUAISHOU_PUBLISH_STRATEGY_SCHEDULED:
             self.publish_date = self.validate_publish_date(self.publish_date)
@@ -413,19 +413,19 @@ class KSBaseUploader(BaseVideoUploader):
             self.publish_date = 0
 
     async def set_schedule_time(self, page: Page, publish_date: datetime):
-        kuaishou_logger.info(_msg("🕒", "小人准备设置定时发布时间"))
+        kuaishou_logger.info(_msg("🕒", "Setting the scheduled publishing time"))
         publish_date_str = publish_date.strftime("%Y-%m-%d %H:%M:%S")
 
-        # 1. 切换到"定时发布"radio (用文本匹配更稳)
+        # 1. Switch to the "定时发布" (scheduled publishing) radio (matching by text is more stable)
         await page.locator('label.ant-radio-wrapper').filter(has_text="定时发布").click()
         await asyncio.sleep(2)
 
-        # 2. 点击 picker 打开下拉面板
+        # 2. Click the picker to open the dropdown panel
         await page.locator('input[placeholder="选择日期时间"]').click()
         await asyncio.sleep(1)
 
-        # 3. 用 React 兼容的方式直接设置 input 的 value
-        #    (ant-design DatePicker 是 controlled component, 必须用 native setter + bubbling event)
+        # 3. Set the input value directly in a React-compatible way
+        #    (the ant-design DatePicker is a controlled component, so a native setter + bubbling event is required)
         js_code = """
         (newValue) => {
             const input = document.querySelector('input[placeholder="选择日期时间"]');
@@ -441,36 +441,36 @@ class KSBaseUploader(BaseVideoUploader):
         """
         ok = await page.evaluate(js_code, publish_date_str)
         if not ok:
-            kuaishou_logger.error("❌ 找不到时间选择器输入框")
+            kuaishou_logger.error("❌ Could not find the time picker input")
             return
 
         await asyncio.sleep(1)
-        # 4. 按 Enter 确认
+        # 4. Press Enter to confirm
         await page.keyboard.press("Enter")
         await asyncio.sleep(2)
-        kuaishou_logger.info(f"✅ 定时发布时间已设置为 {publish_date_str}")
+        kuaishou_logger.info(f"✅ Scheduled publishing time set to {publish_date_str}")
 
     async def close_guide_overlay(self, page: Page) -> bool:
-        """关闭快手创作者平台的 Joyride 引导遮罩。
+        """Close the Joyride onboarding overlay on the Kuaishou creator platform.
 
-        Joyride 有两个关键元素：
-        1. tooltip (alertdialog) — 引导提示框，有关闭按钮
-        2. spotlight (react-joyride__spotlight) — 聚光灯遮罩层，拦截点击事件
-        两者可能独立存在。必须都关掉才能正常操作页面。
+        Joyride has two key elements:
+        1. tooltip (alertdialog): the guide popup, which has a close button
+        2. spotlight (react-joyride__spotlight): the spotlight overlay, which intercepts clicks
+        Either can exist without the other. Both must be closed before the page can be used.
         """
         closed = False
 
-        # 方式1：点击 tooltip 的关闭/跳过按钮
+        # Method 1: click the tooltip's close/skip button
         joyride_tooltip = page.locator('div[id^="react-joyride-step"] div[role="alertdialog"]')
         if await joyride_tooltip.count() > 0 and await joyride_tooltip.first.is_visible():
-            print("检测到 Joyride 引导遮罩，正在关闭...")
-            # 尝试多种关闭按钮 selector
+            print("Joyride onboarding overlay detected, closing...")
+            # Try several close button selectors
             close_selectors = [
                 '[aria-label="Skip"], [data-action="skip"], button[title="Skip"]',
                 'button:text("跳过")',
                 'button:text("我知道了")',
                 'button:text("关闭")',
-                'button:text("下一步")',  # 有时需要多步跳过
+                'button:text("下一步")',  # sometimes several steps have to be skipped
             ]
             for sel in close_selectors:
                 btn = page.locator('div[role="alertdialog"]').locator(sel)
@@ -480,28 +480,28 @@ class KSBaseUploader(BaseVideoUploader):
                     break
             closed = True
 
-        # 方式2：直接移除 Joyride portal（兜底，确保 spotlight 不再拦截）
+        # Method 2: remove the Joyride portal directly (fallback, so the spotlight no longer intercepts)
         joyride_portal = page.locator('div#react-joyride-portal')
         if await joyride_portal.count() > 0:
             try:
                 await page.evaluate("document.getElementById('react-joyride-portal')?.remove()")
-                print("✅ 已移除 Joyride portal 遮罩")
+                print("✅ Removed the Joyride portal overlay")
                 closed = True
             except Exception:
                 pass
 
-        # 方式3：移除 spotlight 元素
+        # Method 3: remove the spotlight element
         spotlight = page.locator('div.react-joyride__spotlight')
         if await spotlight.count() > 0:
             try:
                 await page.evaluate("document.querySelectorAll('.react-joyride__spotlight').forEach(e => e.remove())")
-                print("✅ 已移除 Joyride spotlight")
+                print("✅ Removed the Joyride spotlight")
                 closed = True
             except Exception:
                 pass
 
         if not closed:
-            print("未检测到 Joyride 遮罩，继续执行")
+            print("No Joyride overlay detected, continuing")
         else:
             await asyncio.sleep(0.5)
 
@@ -536,12 +536,12 @@ class KSVideo(KSBaseUploader):
         self.collection_name = collection_name
 
     async def apply_collection(self, page: Page) -> None:
-        """在发布表单页选择"加入合集"下拉框（Ant Design Select，label 属性=合集名）。
+        """Pick a collection in the "加入合集" (Add to collection) dropdown on the publish form (Ant Design Select; the label attribute is the collection name).
 
-        锚点用 label 文字"加入合集"精确定位紧邻的 ant-select 容器，避免误选页面上
-        其它下拉框（服务类型/关联热点/作者声明/添加地点，同页面还有好几个 ant-select）。
-        找不到匹配名字的合集选项时按 Escape 收起下拉，保持未选状态直接发布（界面允许留空，
-        不阻断主发布流程）。
+        The anchor is the label text "加入合集", which pins down the ant-select container right next to it, so we do not pick
+        another dropdown by mistake (service type / related trend / author declaration / add location; the page has several ant-selects).
+        If no collection option matches the name, press Escape to close the dropdown and publish with nothing selected (the form allows it to be empty,
+        and the main publish flow is not blocked).
         """
         if not self.collection_name:
             return
@@ -550,7 +550,7 @@ class KSVideo(KSBaseUploader):
                 'label:text-is("加入合集")'
             ).locator("xpath=following-sibling::div[contains(@class,'ant-select')]").first
             if await trigger.count() == 0:
-                kuaishou_logger.warning(_msg("😵", "未找到\"加入合集\"下拉框，跳过归集"))
+                kuaishou_logger.warning(_msg("😵", "\"加入合集\" (Add to collection) dropdown not found; skipping the collection"))
                 return
             await trigger.locator(".ant-select-selector").click(timeout=8000)
             await page.wait_for_timeout(800)
@@ -558,7 +558,7 @@ class KSVideo(KSBaseUploader):
             option = page.locator(f'div.ant-select-item-option[label="{self.collection_name}"]')
             if await option.count() == 0:
                 kuaishou_logger.warning(
-                    _msg("😵", f"合集下拉框未找到「{self.collection_name}」，跳过归集，保持未选状态")
+                    _msg("😵", f"Collection 「{self.collection_name}」 not found in the dropdown; skipping it and leaving nothing selected")
                 )
                 await page.keyboard.press("Escape")
                 await page.wait_for_timeout(300)
@@ -566,9 +566,9 @@ class KSVideo(KSBaseUploader):
 
             await option.first.click(timeout=8000)
             await page.wait_for_timeout(500)
-            kuaishou_logger.success(_msg("🥳", f"已选择合集：{self.collection_name}"))
+            kuaishou_logger.success(_msg("🥳", f"Selected collection: {self.collection_name}"))
         except Exception as exc:
-            kuaishou_logger.warning(_msg("😵", f"选择合集失败，跳过归集继续发布: {exc}"))
+            kuaishou_logger.warning(_msg("😵", f"Failed to select the collection; skipping it and continuing to publish: {exc}"))
             try:
                 await page.keyboard.press("Escape")
             except Exception:
@@ -577,20 +577,20 @@ class KSVideo(KSBaseUploader):
     async def validate_upload_args(self):
         await self.validate_base_args()
         if not self.title or not str(self.title).strip():
-            raise ValueError("快手视频上传时，title 是必须的")
+            raise ValueError("title is required for a Kuaishou video upload")
         self.file_path = str(self.validate_video_file(self.file_path))
         if self.thumbnail_path:
             self.thumbnail_path = str(self.validate_image_file(self.thumbnail_path))
 
     async def handle_upload_error(self, page: Page):
-        kuaishou_logger.warning(_msg("😵", "视频上传摔了一跤，小人马上重新上传"))
+        kuaishou_logger.warning(_msg("😵", "Video upload failed; uploading again"))
         await page.locator('div.progress-div [class^="upload-btn-input"]').set_input_files(self.file_path)
 
     async def set_thumbnail(self, page: Page):
         if not self.thumbnail_path:
             return
 
-        kuaishou_logger.info(_msg("🖼️", "小人准备设置封面"))
+        kuaishou_logger.info(_msg("🖼️", "Setting the cover"))
 
         cover_label = page.locator("span").filter(has_text="封面设置")
         await cover_label.wait_for(state="visible", timeout=30000)
@@ -613,12 +613,12 @@ class KSVideo(KSBaseUploader):
         await confirm_button.click()
 
         await modal.wait_for(state="hidden", timeout=30000)
-        kuaishou_logger.success(_msg("🥳", "封面已经设置完成"))
+        kuaishou_logger.success(_msg("🥳", "Cover set"))
 
     async def upload(self, playwright: Playwright) -> None:
-        kuaishou_logger.info(_msg("🧍", "小人先检查 cookie、视频文件、封面和发布时间"))
+        kuaishou_logger.info(_msg("🧍", "Checking the cookie, video file, cover and publish time first"))
         await self.validate_upload_args()
-        kuaishou_logger.info(_msg("🥳", "上传前检查通过"))
+        kuaishou_logger.info(_msg("🥳", "Pre-upload checks passed"))
 
         if self.local_executable_path:
             browser = await playwright.chromium.launch(
@@ -637,8 +637,8 @@ class KSVideo(KSBaseUploader):
         try:
             page = await context.new_page()
             await page.goto(KUAISHOU_UPLOAD_URL)
-            kuaishou_logger.info(_msg("🏃", f"小人开始搬运视频: {self.title}.mp4"))
-            kuaishou_logger.info(_msg("🧭", "小人正在赶往快手上传主页"))
+            kuaishou_logger.info(_msg("🏃", f"Starting video upload: {self.title}.mp4"))
+            kuaishou_logger.info(_msg("🧭", "Opening the Kuaishou upload page"))
             await page.wait_for_url(KUAISHOU_UPLOAD_URL_PATTERN)
 
             upload_button = page.locator("button[class^='_upload-btn']")
@@ -660,8 +660,8 @@ class KSVideo(KSBaseUploader):
 
             await self.close_guide_overlay(page)
 
-            kuaishou_logger.info(_msg("✍️", "小人开始填描述和话题"))
-            # 再次检查并关闭 Joyride（可能在文件上传后才弹出）
+            kuaishou_logger.info(_msg("✍️", "Filling in the description and hashtags"))
+            # Check for Joyride again and close it (it may only appear after the file upload)
             await self.close_guide_overlay(page)
             await _focus_desc_editor(page)
             await page.keyboard.press("Backspace")
@@ -671,7 +671,7 @@ class KSVideo(KSBaseUploader):
             await page.keyboard.press("Enter")
 
             for index, tag in enumerate(self.tags[:3], start=1):
-                kuaishou_logger.info(_msg("🏷️", f"小人正在添加第 {index} 个话题: #{tag}"))
+                kuaishou_logger.info(_msg("🏷️", f"Adding hashtag {index}: #{tag}"))
                 await page.keyboard.type(f"#{tag} ")
                 await asyncio.sleep(2)
 
@@ -682,23 +682,23 @@ class KSVideo(KSBaseUploader):
                 try:
                     number = await page.locator("text=上传中").count()
                     if number == 0:
-                        kuaishou_logger.success(_msg("🥳", "视频已经传完啦"))
+                        kuaishou_logger.success(_msg("🥳", "Video upload finished"))
                         break
 
                     if retry_count % 5 == 0:
-                        kuaishou_logger.info(_msg("🏃", "小人正在努力上传视频"))
+                        kuaishou_logger.info(_msg("🏃", "Uploading video..."))
 
                     if await page.locator("text=上传失败").count():
                         await self.handle_upload_error(page)
 
                     await asyncio.sleep(2)
                 except Exception as exc:
-                    kuaishou_logger.warning(_msg("😵", f"检查上传状态时出错，小人继续重试: {exc}"))
+                    kuaishou_logger.warning(_msg("😵", f"Error while checking the upload status; retrying: {exc}"))
                     await asyncio.sleep(2)
                 retry_count += 1
             else:
                 raise TimeoutError(
-                    f"等待快手视频上传完成超时（>{KUAISHOU_UPLOAD_TIMEOUT_SECONDS}秒），已停止发布"
+                    f"Timed out waiting for the Kuaishou video upload to finish (>{KUAISHOU_UPLOAD_TIMEOUT_SECONDS} seconds); publishing stopped"
                 )
 
             await self.set_thumbnail(page)
@@ -715,33 +715,33 @@ class KSVideo(KSBaseUploader):
                     if not confirmed:
                         publish_button = page.get_by_text("发布", exact=True)
                         if await publish_button.count() == 0:
-                            raise RuntimeError("未找到快手发布按钮")
+                            raise RuntimeError("Kuaishou publish button not found")
                         await publish_button.click()
 
                     await asyncio.sleep(1)
                     await _click_visible_publish_confirm(page)
 
                     await page.wait_for_url(KUAISHOU_MANAGE_URL_PATTERN, timeout=5000)
-                    kuaishou_logger.success(_msg("🥳", "视频发布成功，小人开心收工"))
+                    kuaishou_logger.success(_msg("🥳", "Video published successfully, all done"))
                     break
                 except Exception as exc:
                     last_publish_error = exc
                     kuaishou_logger.info(_msg(
-                        "🏃", f"小人正在冲刺发布视频（{attempt}/{KUAISHOU_PUBLISH_ATTEMPTS}）: {exc}"
+                        "🏃", f"Publishing video ({attempt}/{KUAISHOU_PUBLISH_ATTEMPTS}): {exc}"
                     ))
                     if self.debug:
                         await page.screenshot(full_page=True)
                     await asyncio.sleep(1)
             else:
                 raise RuntimeError(
-                    f"快手发布连续失败 {KUAISHOU_PUBLISH_ATTEMPTS} 次，已停止重试: {last_publish_error}"
+                    f"Kuaishou publishing failed {KUAISHOU_PUBLISH_ATTEMPTS} times in a row; stopped retrying: {last_publish_error}"
                 )
 
             upload_success = True
         finally:
             if upload_success:
                 await context.storage_state(path=self.account_file)
-                kuaishou_logger.success(_msg("🥳", "cookie 更新完毕"))
+                kuaishou_logger.success(_msg("🥳", "Cookie updated"))
                 await asyncio.sleep(2)
             await context.close()
             await browser.close()
@@ -779,9 +779,9 @@ class KSNote(KSBaseUploader):
     async def validate_upload_args(self):
         await self.validate_base_args()
         if not self.title or not str(self.title).strip():
-            raise ValueError("快手图文上传时，title 是必须的")
+            raise ValueError("title is required for a Kuaishou image post upload")
         if not self.image_paths:
-            raise ValueError("快手图文上传时，图片是必须的")
+            raise ValueError("Images are required for a Kuaishou image post upload")
 
         if isinstance(self.image_paths, (str, Path)):
             self.image_paths = [self.image_paths]
@@ -792,12 +792,12 @@ class KSNote(KSBaseUploader):
         self.image_paths = normalized_image_paths
 
     async def upload_note_content(self, page: Page) -> None:
-        kuaishou_logger.info(_msg("🏃", f"小人开始搬运图文，共 {len(self.image_paths)} 张图片"))
-        kuaishou_logger.info(_msg("🔀", "小人正在切换到图文发布"))
+        kuaishou_logger.info(_msg("🏃", f"Starting image post upload, {len(self.image_paths)} images"))
+        kuaishou_logger.info(_msg("🔀", "Switching to image post publishing"))
         await page.locator('div[role="tablist"] div[role="tab"]:has-text("图文")').click()
         await page.wait_for_timeout(1000)
 
-        kuaishou_logger.info(_msg("📤", "小人正在上传图片"))
+        kuaishou_logger.info(_msg("📤", "Uploading images..."))
         upload_button = page.locator("button[class^='_upload-btn']").filter(has_text="上传图片")
         await upload_button.wait_for(state="visible", timeout=10000)
 
@@ -815,7 +815,7 @@ class KSNote(KSBaseUploader):
 
         await self.close_guide_overlay(page)
 
-        kuaishou_logger.info(_msg("✍️", "小人开始填写图文内容和话题"))
+        kuaishou_logger.info(_msg("✍️", "Filling in the image post content and hashtags"))
         await _focus_desc_editor(page)
         await page.keyboard.press("Backspace")
         await page.keyboard.press("Control+KeyA")
@@ -824,7 +824,7 @@ class KSNote(KSBaseUploader):
         await page.keyboard.press("Enter")
 
         for index, tag in enumerate(self.tags[:3], start=1):
-            kuaishou_logger.info(_msg("🏷️", f"小人正在添加第 {index} 个话题: #{tag}"))
+            kuaishou_logger.info(_msg("🏷️", f"Adding hashtag {index}: #{tag}"))
             await page.keyboard.type(f"#{tag} ")
             await asyncio.sleep(2)
 
@@ -834,24 +834,24 @@ class KSNote(KSBaseUploader):
             try:
                 number = await page.locator("text=上传中").count()
                 if number == 0:
-                    kuaishou_logger.success(_msg("🥳", "图文素材已经传完啦"))
+                    kuaishou_logger.success(_msg("🥳", "Image post media upload finished"))
                     break
 
                 if retry_count % 5 == 0:
-                    kuaishou_logger.info(_msg("🏃", "小人正在努力上传图文素材"))
+                    kuaishou_logger.info(_msg("🏃", "Uploading image post media..."))
 
                 if await page.locator("text=上传失败").count():
-                    kuaishou_logger.warning(_msg("😵", "图文素材上传摔了一跤，小人马上重新上传"))
+                    kuaishou_logger.warning(_msg("😵", "Image post media upload failed; uploading again"))
                     await page.locator('div.progress-div [class^="upload-btn-input"]').set_input_files(self.image_paths)
 
                 await asyncio.sleep(2)
             except Exception as exc:
-                kuaishou_logger.warning(_msg("😵", f"检查图文上传状态时出错，小人继续重试: {exc}"))
+                kuaishou_logger.warning(_msg("😵", f"Error while checking the image post upload status; retrying: {exc}"))
                 await asyncio.sleep(2)
             retry_count += 1
 
         if retry_count == max_retries:
-            kuaishou_logger.warning(_msg("😵", "超过最大重试次数，图文上传可能未完成"))
+            kuaishou_logger.warning(_msg("😵", "Maximum retries exceeded; the image post upload may not have finished"))
 
         if self.publish_strategy == KUAISHOU_PUBLISH_STRATEGY_SCHEDULED and self.publish_date != 0:
             await self.set_schedule_time(page, self.publish_date)
@@ -868,18 +868,18 @@ class KSNote(KSBaseUploader):
                     await confirm_button.click()
 
                 await page.wait_for_url(KUAISHOU_MANAGE_URL_PATTERN, timeout=5000)
-                kuaishou_logger.success(_msg("🥳", "图文发布成功，小人开心收工"))
+                kuaishou_logger.success(_msg("🥳", "Image post published successfully, all done"))
                 break
             except Exception as exc:
-                kuaishou_logger.info(_msg("🏃", f"小人正在冲刺发布图文: {exc}"))
+                kuaishou_logger.info(_msg("🏃", f"Publishing image post: {exc}"))
                 if self.debug:
                     await page.screenshot(full_page=True)
                 await asyncio.sleep(1)
 
     async def upload(self, playwright: Playwright) -> None:
-        kuaishou_logger.info(_msg("🧍", "小人先检查 cookie、图片和发布时间"))
+        kuaishou_logger.info(_msg("🧍", "Checking the cookie, images and publish time first"))
         await self.validate_upload_args()
-        kuaishou_logger.info(_msg("🥳", "图文上传前检查通过"))
+        kuaishou_logger.info(_msg("🥳", "Image post pre-upload checks passed"))
 
         if self.local_executable_path:
             browser = await playwright.chromium.launch(
@@ -898,7 +898,7 @@ class KSNote(KSBaseUploader):
         try:
             page = await context.new_page()
             await page.goto(KUAISHOU_UPLOAD_URL)
-            kuaishou_logger.info(_msg("🧭", "小人正在赶往快手图文发布页"))
+            kuaishou_logger.info(_msg("🧭", "Opening the Kuaishou image post publish page"))
             await page.wait_for_url(KUAISHOU_UPLOAD_URL_PATTERN)
 
             await self.upload_note_content(page)
@@ -906,7 +906,7 @@ class KSNote(KSBaseUploader):
         finally:
             if upload_success:
                 await context.storage_state(path=self.account_file)
-                kuaishou_logger.success(_msg("🥳", "cookie 更新完毕"))
+                kuaishou_logger.success(_msg("🥳", "Cookie updated"))
                 await asyncio.sleep(2)
             await context.close()
             await browser.close()

@@ -1,4 +1,4 @@
-"""Meta Business Suite 浏览器发布。"""
+"""Meta Business Suite publishing through the browser."""
 
 from .main import MetaBusinessUploader, meta_account_file, meta_cookie_auth, meta_setup
 

@@ -1,16 +1,16 @@
 ---
 name: instagram-upload
-description: 使用 sau CLI 在 Instagram 独立网页登录、立即发布 Reels/单图/轮播、核验原作品并移至最近删除。
+description: Use the sau CLI to log in on the standalone Instagram website, publish Reels, single images or carousels immediately, verify the original post and move it to Recently deleted.
 license: MIT-0
 slug: social-auto-upload-instagram-upload
-displayName: Instagram 视频与图文发布
+displayName: Instagram video and image post publishing
 version: 1.0.0
-summary: 发布 Instagram Reels、单图或轮播，并核验作品。
+summary: Publish Instagram Reels, single images or carousels and verify the post.
 ---
 
-# Instagram 独立网页发布
+# Instagram standalone web publishing
 
-调用现有 CLI，不自行实现浏览器上传。使用工程 Patchright Chrome 和独立 Instagram 会话，不使用 Business Suite 的绑定入口。默认可见浏览器，未配置代理时按系统网络直连；需要代理时显式使用 `--proxy` 或设置 `SAU_INSTAGRAM_PROXY`。传 `--proxy ""` 可忽略环境变量并直连。
+Call the existing CLI; do not implement browser upload yourself. It uses the project's Patchright Chrome and a standalone Instagram session, not the Business Suite linking entry. The browser is visible by default, and with no proxy configured it connects directly through the system network. If a proxy is needed, pass `--proxy` explicitly or set `SAU_INSTAGRAM_PROXY`. Pass `--proxy ""` to ignore the environment variable and connect directly.
 
 ```powershell
 sau instagram login --account creator
@@ -19,27 +19,27 @@ sau instagram upload-video --account creator --file videos/demo.mp4 --thumbnail 
 sau instagram upload-note --account creator --images images/1.jpg images/2.jpg --title "轮播标题" --note "正文" --result .local/instagram-images.json
 ```
 
-视频/Reel 可用 `--thumbnail` 指定 JPG/JPEG/PNG 封面；省略时使用 Instagram 默认封面。指定图片后会检查主预览确实使用该图片，失败则停止提交。封面按当前视频画幅居中裁剪，图片边缘的重要文字应留出安全区域。图文发布不接受此参数。
+For a video/Reel, `--thumbnail` can set a JPG/JPEG/PNG cover; if omitted, Instagram's default cover is used. After an image is specified, the main preview is checked to confirm that it really uses that image, and the submission stops if it does not. The cover is center-cropped to the current video frame, so leave a safe margin for important text near the image edges. Image post publishing does not accept this argument.
 
-账号文件保存为 `cookies/instagram_creator.json`。密码和验证由用户在工程浏览器输入。上传流程会自动跳过首次通知提示、确认 Reels 介绍，没有提示则继续。登录验证仍由用户完成；未知弹窗或提示关闭失败须报告，不能宣称上传成功。
+The account file is saved as `cookies/instagram_creator.json`. The password and verification are entered by the user in the project's browser. The upload flow automatically skips the first-time notification prompt and confirms the Reels introduction, and continues if there is no prompt. Login verification is still completed by the user; an unknown pop-up, or a failure to close a prompt, must be reported, and the upload must not be claimed as successful.
 
-视频支持 MP4/MOV，照片支持 JPG/JPEG/PNG/AVIF/HEIC/HEIF，实际处理取决于平台。多图按输入顺序发布轮播，单图和两图轮播已实测。标题、正文、标签合计最多 2200 字符。当前账号独立网页版的照片/Reels 表单及高级设置没有定时入口，当前 CLI 仅支持立即发布；不能把定时任务转换成立即发布。地点、协作者、AI 标签、替代文字、滤镜、裁剪、声音和评论/点赞设置未接入，沿用页面默认值。
+Videos support MP4/MOV and photos support JPG/JPEG/PNG/AVIF/HEIC/HEIF; actual handling depends on the platform. Multiple images are published as a carousel in the input order, and a single image and a two-image carousel have been tested. The title, body and tags together are at most 2200 characters. In the standalone web version for this account, the photo/Reels form and its advanced settings have no scheduling entry, so the CLI only supports immediate publishing for now; a scheduled task must not be converted into immediate publishing. Location, collaborators, AI labels, alt text, filters, cropping, sound and comment/like settings are not integrated and keep the page defaults.
 
-最终结果 `published` 代表平台确认作品创建，返回作品编号、原作品链接和媒体数。`processing` 表示已受理且仍在处理，`submission_unknown` 表示提交后结果未确认；不能当成已发布，也不能直接重发。默认结果位于 `.local/instagram-results/`，使用 `--result` 固定记录路径。
+A final result of `published` means the platform confirmed that the post was created, and it returns the post ID, the original post link and the media count. `processing` means the post was accepted and is still being processed, and `submission_unknown` means the result was not confirmed after submission; neither may be treated as published, and neither may be resent directly. Results are in `.local/instagram-results/` by default; use `--result` to fix the record path.
 
 ```powershell
-sau instagram verify --account creator --post-url "原作品链接" --expected-text "原作品中的准确文字" --result .local/instagram-verify.json
-sau instagram delete --account creator --post-url "原作品链接" --expected-text "原作品中的准确文字" --result .local/instagram-delete.json
+sau instagram verify --account creator --post-url "original-post-link" --expected-text "exact-text-from-the-original-post" --result .local/instagram-verify.json
+sau instagram delete --account creator --post-url "original-post-link" --expected-text "exact-text-from-the-original-post" --result .local/instagram-delete.json
 ```
 
-结果未知但没有链接时，先在同一账号主页按素材、配文和发布时间找原作品，复制链接再运行 `verify`；未找到不证明失败，不重复上传。链接支持 `/p/编号/`、`/reel/编号/` 和带作者名的形式。核对登录用户、作者、作品编号和正文后才允许删除。删除返回 `deleted`，作品进入“最近删除”；批量删除和提前永久清空不在范围内。本地素材不会删除。`deletion_unknown` 须先查询原作品和“最近删除”，不重复提交删除。
+If the result is unknown and there is no link, first find the original post on the same account's profile by materials, caption and publish time, copy the link and then run `verify`; not finding it does not prove failure, so do not upload again. The link supports `/p/<ID>/`, `/reel/<ID>/` and the form that includes the author name. Deletion is allowed only after checking the logged-in user, the author, the post ID and the body. Deletion returns `deleted` and the post goes to 最近删除 (Recently deleted); bulk deletion and early permanent clearing are out of scope. Local materials are not deleted. For `deletion_unknown`, first look up the original post and 最近删除 (Recently deleted), and do not submit the deletion again.
 
-完整参数和能力边界以 `sau instagram upload-video --help`、`upload-note --help`、`verify --help` 和 `delete --help` 为准。失败时根据结果文件中的错误及本地证据分析；不得把账号状态、截图或页面记录提交到 Git。
+For the full arguments and capability limits, `sau instagram upload-video --help`, `upload-note --help`, `verify --help` and `delete --help` are authoritative. When something fails, analyze it from the error in the result file and the local evidence; do not commit account state, screenshots or page records to Git.
 
-## 示例脚本
+## Example scripts
 
-`scripts/examples/` 下的文件是复制用示例，不是运行时依赖。执行前先查看当前 CLI 的 `--help`，替换账号、素材和正文；这些命令可能创建真实作品。
+The files under `scripts/examples/` are examples to copy, not runtime dependencies. Before running them, check the current CLI's `--help` and replace the account, materials and body; these commands may create real posts.
 
-- `instagram_commands.ps1`：PowerShell
-- `instagram_commands.sh`：Bash
-- `instagram_cli_template.py`：Python subprocess
+- `instagram_commands.ps1`: PowerShell
+- `instagram_commands.sh`: Bash
+- `instagram_cli_template.py`: Python subprocess

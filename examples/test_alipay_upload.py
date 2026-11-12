@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""测试支付宝生活号上传：使用已保存的 cookie 上传并发布一个视频。"""
+"""Test Alipay Life Account upload: use the saved cookie to upload and publish a video."""
 import asyncio
 import sys
 from datetime import datetime

@@ -13,7 +13,7 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        // 移除自动导入，改用@use语法
+        // Auto-import removed; use the @use syntax instead
       }
     }
   },

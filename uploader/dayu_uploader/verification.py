@@ -1,4 +1,4 @@
-"""只读确认原作品已提交发表；显式要求时再等待公开并核验内容。"""
+"""Read-only confirmation that the original post was submitted; waits for it to go public and checks the content only when asked explicitly."""
 from __future__ import annotations
 
 import asyncio
@@ -15,11 +15,11 @@ from utils.log import dayu_logger
 
 
 async def check_dayu_article_content(body: Locator, manifest: dict) -> None:
-    """编辑器和公开正文共用内容检查，图文顺序或支持的格式有变化即报错。"""
+    """Content check shared by the editor and the public body; any change in the order of text and images or in supported formats is an error."""
     await expect(body.locator("img")).to_have_count(manifest["image_count"])
     text = re.sub(r"[\s\u200b\ufeff]+", "", await body.inner_text())
     if sha256(text.encode()).hexdigest() != manifest["text_sha256"]:
-        raise RuntimeError("文章正文与输入文件文字不一致")
+        raise RuntimeError("The article body text does not match the input file")
     sequence = await body.evaluate("""body => {
         let value = '';
         function visit(node) {
@@ -32,11 +32,11 @@ async def check_dayu_article_content(body: Locator, manifest: dict) -> None:
     }""")
     sequence = re.sub(r"[\s\u200b\ufeff]+", "", sequence)
     if sha256(sequence.encode()).hexdigest() != manifest["structure_sha256"]:
-        raise RuntimeError("文章的文字、图片或分隔线顺序与输入文件不一致")
+        raise RuntimeError("The order of text, images or dividers in the article does not match the input file")
     for tag, count in manifest["formats"].items():
         await expect(body.locator(tag)).to_have_count(count)
     if manifest.get("dayu_style"):
-        # 兼容排版使用服务器实测保留的 font/table 属性；检查实际计算颜色，避免属性存在却被覆盖。
+        # The compatible layout uses the font/table attributes the server was tested to keep; check the actual computed colors so an attribute that is present but overridden is caught.
         actual = await body.evaluate("""body => ({
             text_colors: [...body.querySelectorAll('font[color]')].map(font => ({
                 text: font.textContent.replace(/[\\s\\u200b\\ufeff]+/g, ''), color: getComputedStyle(font).color,
@@ -44,16 +44,16 @@ async def check_dayu_article_content(body: Locator, manifest: dict) -> None:
             background_colors: [...body.querySelectorAll('table[bgcolor]')].map(table => getComputedStyle(table).backgroundColor),
         })""")
         if actual != manifest["dayu_style"]:
-            raise RuntimeError("大鱼号预览或公开正文未保留预期的主题文字颜色、背景色")
+            raise RuntimeError("The Dayu preview or public body did not keep the expected theme text and background colors")
 
 
 async def wait_dayu_publication(context: BrowserContext, content_id: str | None = None,
                                 origin_id: str | None = None, title: str | None = None,
                                 timeout: int = 60, public: bool = False,
                                 schedule: str | None = None) -> dict:
-    """默认确认原作品已提交；只有显式公开核验才等待公开，始终不重发。"""
+    """By default confirm that the original post was submitted; only an explicit public check waits for it to go public. Never republishes."""
     if not content_id and not origin_id:
-        raise ValueError("核验必须提供 content_id 或 origin_id（预览时保存的草稿 ID）")
+        raise ValueError("Verification needs a content_id or an origin_id (the draft ID saved at preview)")
     deadline = time.monotonic() + timeout
     record = None
     last_status = None
@@ -62,7 +62,7 @@ async def wait_dayu_publication(context: BrowserContext, content_id: str | None 
         total_pages = 1
         record = None
         while page_number <= total_pages and time.monotonic() < deadline:
-            # 来自真实“全部”页的请求参数。不能依赖发表后跳转的 shortvideo 筛选。
+            # Request parameters taken from the real "全部" (All) page. The shortvideo filter the page jumps to after publishing cannot be relied on.
             response = await context.request.get(
                 "https://mp.dayu.com/dashboard/getNewContentList",
                 params={"_rid": uuid4().hex, "currentView": "all", "source": "all",
@@ -70,43 +70,43 @@ async def wait_dayu_publication(context: BrowserContext, content_id: str | None 
                 timeout=max(1, min(30000, int((deadline - time.monotonic()) * 1000))),
             )
             if not response.ok:
-                raise RuntimeError(f"查询大鱼号作品失败: HTTP {response.status}")
+                raise RuntimeError(f"Failed to query Dayu posts: HTTP {response.status}")
             payload = await response.json()
             data_list = payload.get("dataList")
             if not isinstance(data_list, dict) or not isinstance(data_list.get("data"), list):
-                raise RuntimeError("作品查询未返回 dataList.data；可能登录失效或平台接口变化")
+                raise RuntimeError("The post query returned no dataList.data; the login may have expired or the platform API changed")
             total_pages = int(data_list["totalPage"])
             matches = [item for item in data_list["data"]
                        if (not content_id or str(item.get("content_id")) == content_id)
                        and (not origin_id or item.get("origin_id") == origin_id)]
             if len(matches) > 1:
-                raise RuntimeError("同一作品 ID 匹配多条记录，拒绝判定成功")
+                raise RuntimeError("The same post ID matches several records; refusing to report success")
             if matches:
                 record = matches[0]
                 break
             page_number += 1
         if record:
             if title is not None and record.get("title") != title:
-                raise RuntimeError("作品 ID 对应的标题与本次提交不一致")
+                raise RuntimeError("The title for this post ID does not match this submission")
             current_status = {"status": record.get("status"), "audit_status": record.get("audit_status")}
             if current_status != last_status:
-                dayu_logger.info(f"大鱼号作品查询: content_id={record.get('content_id')}，{current_status}")
+                dayu_logger.info(f"Dayu post query: content_id={record.get('content_id')}, {current_status}")
             last_status = current_status
-            # 审核中的原作品已提交成功；公开核验是调用者额外选择的检查范围。
+            # An original post under review was submitted successfully; the public check is an extra scope the caller chooses.
             if schedule or record.get("status") == DAYU_CONTENT_SCHEDULED:
                 epoch = record.get("_app_extra", {}).get("time_for_release")
                 if isinstance(epoch, bool) or not isinstance(epoch, (int, float)) or epoch <= 0:
-                    raise RuntimeError("原作品缺少已保存的定时安排，拒绝确认成功")
+                    raise RuntimeError("The original post has no saved schedule; refusing to confirm success")
                 actual = datetime.fromtimestamp(epoch / 1000, DAYU_TIMEZONE)
                 if schedule and actual != datetime.fromisoformat(schedule):
-                    raise RuntimeError(f"原作品定时时间不一致: 预期={schedule}，实际={actual.isoformat()}")
+                    raise RuntimeError(f"Scheduled time of the original post does not match: expected={schedule}, actual={actual.isoformat()}")
             accepted = (DAYU_CONTENT_PUBLIC,) if public else (DAYU_CONTENT_PUBLIC, DAYU_CONTENT_REVIEWING, DAYU_CONTENT_SCHEDULED)
             if record.get("status") in accepted:
                 break
         await asyncio.sleep(min(5, max(0, deadline - time.monotonic())))
     else:
-        target = "公开访问" if public else "提交发表确认"
-        raise TimeoutError(f"等待大鱼号{target}超时；最后状态={last_status}，请核查原作品，勿重新上传")
+        target = "公开访问" if public else "提交发表确认"  # "public access" / "publish submission confirmed"
+        raise TimeoutError(f"Timed out waiting for Dayu {target}; last status={last_status}, check the original post, do not upload again")
 
     return record
 
@@ -115,7 +115,7 @@ async def verify_dayu_video(context: BrowserContext, browser: Browser, identity:
                             content_id: str | None = None, origin_id: str | None = None,
                             title: str | None = None, timeout: int = 60, public: bool = False,
                             schedule: str | None = None) -> dict:
-    """确认原视频已提交；public=True 时额外验证匿名标题、作者及播放。"""
+    """Confirm the original video was submitted; with public=True also verify the anonymous title, author and playback."""
     record = await wait_dayu_publication(context, content_id, origin_id, title, timeout, public, schedule)
     result = {"success": True, "status": "published" if record["status"] == DAYU_CONTENT_PUBLIC else "submitted", "type": "video",
               "content_id": str(record["content_id"]), "origin_id": record["origin_id"],
@@ -134,14 +134,14 @@ async def verify_dayu_video(context: BrowserContext, browser: Browser, identity:
             or parsed.path != "/video.html"
             or query.get("wm_id") != [identity["wmid"]]
             or query.get("wm_aid") != [record["origin_id"]]):
-        raise RuntimeError("作品公开地址的域名、主体或 origin_id 不匹配")
+        raise RuntimeError("The domain, identity or origin_id of the post's public URL does not match")
 
-    # 新建不带 storage_state 的上下文，避免登录后的预览权限掩盖公开播放失败。
+    # Create a new context without storage_state, so logged-in preview permissions cannot hide a public playback failure.
     public_context = await browser.new_context()
     try:
         public_page = await public_context.new_page()
         await public_page.goto(public_url, wait_until="domcontentloaded", timeout=45000)
-        # 只使用组件含义前缀，排除构建生成的 class 哈希后缀与推荐卡片中的同名作者。
+        # Use only the component's meaningful prefix, excluding the build-generated class hash suffix and same-named authors in recommendation cards.
         await expect(public_page.locator('[class^="pc-videoContent-"]')).to_have_text(record["title"], timeout=30000)
         await expect(public_page.locator('[class^="pc-userInfoContainer-"] > span')).to_have_text(identity["name"])
         video = public_page.locator("video")
@@ -166,7 +166,7 @@ async def verify_dayu_article(context: BrowserContext, browser: Browser, identit
                               title: str | None = None, timeout: int = 60,
                               manifest: dict | None = None, public: bool = False,
                               schedule: str | None = None) -> dict:
-    """确认原文章已提交；public=True 时再匿名核对正文、图片位置及格式。"""
+    """Confirm the original article was submitted; with public=True also check the body, image positions and formatting anonymously."""
     record = await wait_dayu_publication(context, content_id, origin_id, title, timeout, public, schedule)
     result = {"success": True, "status": "published" if record["status"] == DAYU_CONTENT_PUBLIC else "submitted", "type": "article",
               "content_id": str(record["content_id"]), "origin_id": record["origin_id"],
@@ -179,8 +179,8 @@ async def verify_dayu_article(context: BrowserContext, browser: Browser, identit
     if not public:
         return result
     if not re.fullmatch(r"[a-f0-9]{32}", record.get("origin_id", "")):
-        raise RuntimeError("文章原稿 ID 不完整，无法打开公开文章")
-    # 实际后台点击已发布图文标题产生此地址；图文列表不提供视频使用的 ucUrl 字段。
+        raise RuntimeError("The article draft ID is incomplete; cannot open the public article")
+    # Clicking a published image post title in the real dashboard produces this URL; the image post list does not have the ucUrl field used for videos.
     public_url = "https://mparticle.uc.cn/article.html?" + urlencode({
         "uc_param_str": "frdnsnpfvecpntnwprdssskt", "wm_aid": record["origin_id"],
     })
@@ -188,7 +188,7 @@ async def verify_dayu_article(context: BrowserContext, browser: Browser, identit
     try:
         page = await public_context.new_page()
         await page.goto(public_url, wait_until="domcontentloaded", timeout=45000)
-        # 公开正文组件前缀不包含构建哈希；限定文章容器，排除推荐区标题、作者及图片。
+        # The public body component prefix has no build hash; scope to the article container, excluding titles, authors and images in the recommendation area.
         article = page.locator('[class^="index-articleContainer-"]')
         await expect(article.locator(":scope > h1")).to_have_text(record["title"], timeout=30000)
         await expect(article.locator('[class^="article-userInfoName-"]')).to_have_text(identity["name"])
@@ -204,7 +204,7 @@ async def verify_dayu_article(context: BrowserContext, browser: Browser, identit
             await expect(image).to_have_attribute("src", re.compile(r"^https?://(?:image\.uc\.cn|mp\.dayu\.com)/"))
             await expect(image).to_have_js_property("complete", True, timeout=30000)
             if await image.evaluate("e => e.naturalWidth") <= 0:
-                raise RuntimeError(f"公开文章第 {index + 1} 张图片无法加载")
+                raise RuntimeError(f"Image {index + 1} in the public article cannot be loaded")
         if manifest:
             await check_dayu_article_content(body, manifest)
         public_article = {"image_count": await images.count(), "content_checked": bool(manifest)}

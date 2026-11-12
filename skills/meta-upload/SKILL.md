@@ -1,20 +1,20 @@
 ---
 name: meta-upload
-description: 使用 sau CLI 登录 Facebook Page，发布视频或图文、设置北京时间排期、查询原作品并删除。
+description: Use the sau CLI to log in to a Facebook Page, publish videos or image posts, set a schedule in Beijing time, look up the original post and delete it.
 license: MIT-0
 slug: social-auto-upload-meta-upload
-displayName: Facebook Page 发布
+displayName: Facebook Page publishing
 version: 1.0.0
-summary: 发布 Facebook Page 视频或图文，并管理排期。
+summary: Publish Facebook Page videos or image posts and manage schedules.
 ---
 
-# Facebook Page 发布与删除
+# Facebook Page publishing and deletion
 
-本 Skill 调用现有 `sau facebook-page`，不重复实现浏览器逻辑。Instagram 当前暂停，后续使用独立网页方式；不使用 Business Suite 绑定 Instagram。
+This Skill calls the existing `sau facebook-page` and does not reimplement the browser logic. Instagram is currently on hold and will later use its own web-based approach; Business Suite is not used to link Instagram.
 
-默认不配置代理，浏览器按系统网络直连；网络环境需要代理时显式传 `--proxy` 或设置 `SAU_FACEBOOK_PAGE_PROXY`。
+No proxy is configured by default, and the browser connects directly through the system network. If your network needs a proxy, pass `--proxy` explicitly or set `SAU_FACEBOOK_PAGE_PROXY`.
 
-先登录并保存账号别名：
+Log in first and save the account alias:
 
 ```powershell
 sau facebook-page login --account creator
@@ -23,25 +23,25 @@ sau facebook-page upload-note --account creator --page "我的 Page" --images im
 sau facebook-page upload-video --account creator --page "我的 Page" --file videos/demo.mp4 --title "标题" --desc "正文" --schedule "2026-10-21 10:30" --result .local/reel-result.json
 ```
 
-视频与图文均可传 `--schedule "YYYY-MM-DD HH:MM"`，使用北京时间、至少提前 2 小时，浏览器时区必须为 Asia/Shanghai；留空立即提交。`--page` 填准确 Page 名称。`--tags` 为英文逗号分隔标签。传 `--proxy ""` 可忽略环境变量并直连。
+Both videos and image posts accept `--schedule "YYYY-MM-DD HH:MM"`. It uses Beijing time and must be at least 2 hours ahead, and the browser time zone must be Asia/Shanghai; leave it empty to submit immediately. Give the exact Page name in `--page`. `--tags` is a list of tags separated by English commas. Pass `--proxy ""` to ignore the environment variable and connect directly.
 
-结果默认保存到 `.local/meta-results/`，建议显式传 `--result`，避免手工抄写编号。`scheduled` 表示平台确认排期并核对原记录；`published` 表示图文已发布；视频立即提交在创建响应无错误且完成弹窗出现后返回 `processing`，表示平台已受理并正在处理，尚不能证明已公开播放，`content_id` 可能暂时没有。`submission_unknown` 只表示提交证据不足，必须先查询原记录，不重发。
+Results are saved to `.local/meta-results/` by default. Pass `--result` explicitly to avoid copying IDs by hand. `scheduled` means the platform confirmed the schedule and the original record was checked; `published` means the image post is published. For an immediate video submission, `processing` is returned once the creation response has no error and the completion dialog has appeared. It means the platform has accepted the video and is processing it, which does not yet prove it is publicly playable, and `content_id` may not be available yet. `submission_unknown` only means the evidence of submission is insufficient; look up the original record first and do not resend.
 
-用结果中的 Page ID、Page 名、内容编号和正文查询或删除：
+Look up or delete using the Page ID, Page name, content ID and body from the result:
 
 ```powershell
-sau facebook-page verify --account creator --page "我的 Page" --page-id "Page数字ID" --content-id "内容编号" --expected-text "原作品正文" --scheduled
-sau facebook-page delete --account creator --page "我的 Page" --page-id "Page数字ID" --content-id "内容编号" --expected-text "原作品正文" --scheduled --result .local/delete-result.json
+sau facebook-page verify --account creator --page "我的 Page" --page-id "Page-numeric-ID" --content-id "content-ID" --expected-text "original-post-text" --scheduled
+sau facebook-page delete --account creator --page "我的 Page" --page-id "Page-numeric-ID" --content-id "content-ID" --expected-text "original-post-text" --scheduled --result .local/delete-result.json
 ```
 
-`--scheduled` 选择定时列表；删除会取消排期并永久移除，返回 `deleted`。管理已发布作品时不加它，当前平台会移至垃圾箱，返回 `trashed`，30 天后自动删除；未接入 Page 垃圾箱提前永久删除。已定时作品实际发布后编号可能变化，需使用已发布列表中的编号。
+`--scheduled` selects the scheduled list; deleting cancels the schedule and removes the post permanently, and returns `deleted`. Do not add it when managing a published post: the platform currently moves it to the trash and returns `trashed`, and deletes it automatically after 30 days. Early permanent deletion from the Page trash is not integrated. The ID of a scheduled post may change once it is actually published, so use the ID from the published list.
 
-只覆盖已加载的近期列表，不保证自动查找全部历史作品。同文案不能唯一定位、Page 或编号不符时不删除。删除后超时或浏览器断开时先核对原记录，不自动重删；本地素材保留。完整参数以 `sau facebook-page upload-video --help`、`upload-note --help`、`verify --help` 和 `delete --help` 为准。
+It only covers the recent list that has been loaded and does not guarantee finding every historical post. It does not delete when the same caption cannot identify the post uniquely, or when the Page or ID does not match. If a timeout or browser disconnect happens after deleting, check the original record first and do not delete again automatically; local materials are kept. For the full arguments, `sau facebook-page upload-video --help`, `upload-note --help`, `verify --help` and `delete --help` are authoritative.
 
-## 示例脚本
+## Example scripts
 
-`scripts/examples/` 下的文件是复制用示例，不是运行时依赖。执行前先查看当前 CLI 的 `--help`，替换账号、素材和正文；这些命令可能创建真实作品。
+The files under `scripts/examples/` are examples to copy, not runtime dependencies. Before running them, check the current CLI's `--help` and replace the account, materials and body; these commands may create real posts.
 
-- `meta_commands.ps1`：PowerShell
-- `meta_commands.sh`：Bash
-- `meta_cli_template.py`：Python subprocess
+- `meta_commands.ps1`: PowerShell
+- `meta_commands.sh`: Bash
+- `meta_cli_template.py`: Python subprocess

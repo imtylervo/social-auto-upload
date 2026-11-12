@@ -1,4 +1,4 @@
-"""验证文章渲染的内容完整性、资源路径、平台边界及 CLI 参数。"""
+"""Check article rendering: content integrity, resource paths, platform limits and CLI arguments."""
 import tempfile
 import unittest
 from pathlib import Path
@@ -56,7 +56,7 @@ class ArticleRenderTests(unittest.TestCase):
                           '<p style="line-height:1.8">正文<strong>重点</strong></p>', encoding="utf-8")
         doc = load_article(source)
         self.assertIn('color:red;border-left:3px solid blue', doc.content_html)
-        with self.assertRaisesRegex(ValueError, "仅适用于 Markdown"):
+        with self.assertRaisesRegex(ValueError, "only applies to Markdown"):
             load_article(source, "grace")
         self.assertEqual(load_dayu_article(source).content_html, doc.content_html)
 
@@ -75,7 +75,7 @@ class ArticleRenderTests(unittest.TestCase):
             render_article_file(self.source, target)
         self.assertEqual(target.read_text(), "existing")
         render_article_file(self.source, target, overwrite=True)
-        with self.assertRaisesRegex(ValueError, "输入原稿"):
+        with self.assertRaisesRegex(ValueError, "overwrite the input draft"):
             render_article_file(target, target, overwrite=True)
 
     def test_unsafe_or_unimplemented_formats_are_explicit_errors(self):

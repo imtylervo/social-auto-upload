@@ -19,7 +19,7 @@ def sign_local(uri, data=None, a1="", web_session=""):
                 stealth_js_path = pathlib.Path(BASE_DIR / "utils/stealth.min.js")
                 chromium = playwright.chromium
 
-                # 如果一直失败可尝试设置成 False 让其打开浏览器，适当添加 sleep 可查看浏览器状态
+                # If this keeps failing, try setting it to False so the browser opens; adding a sleep lets you watch the browser state
                 browser = chromium.launch(headless=LOCAL_CHROME_HEADLESS)
 
                 browser_context = browser.new_context()
@@ -30,7 +30,7 @@ def sign_local(uri, data=None, a1="", web_session=""):
                     {'name': 'a1', 'value': a1, 'domain': ".xiaohongshu.com", 'path': "/"}]
                 )
                 context_page.reload()
-                # 这个地方设置完浏览器 cookie 之后，如果这儿不 sleep 一下签名获取就失败了，如果经常失败请设置长一点试试
+                # After the browser cookie is set here, getting the signature fails without a short sleep; if it fails often, try a longer sleep
                 sleep(2)
                 encrypt_params = context_page.evaluate("([url, data]) => window._webmsxyw(url, data)", [uri, data])
                 return {
@@ -38,13 +38,13 @@ def sign_local(uri, data=None, a1="", web_session=""):
                     "x-t": str(encrypt_params["X-t"])
                 }
         except Exception:
-            # 这儿有时会出现 window._webmsxyw is not a function 或未知跳转错误，因此加一个失败重试趴
+            # This sometimes hits "window._webmsxyw is not a function" or an unknown redirect error, so retry on failure
             pass
-    raise Exception("重试了这么多次还是无法签名成功，寄寄寄")
+    raise Exception("Signing still failed after all these retries. Giving up")
 
 
 def sign(uri, data=None, a1="", web_session=""):
-    # 填写自己的 flask 签名服务端口地址
+    # Fill in the address and port of your own flask signing service
     res = requests.post(f"{XHS_SERVER}/sign",
                         json={"uri": uri, "data": data, "a1": a1, "web_session": web_session})
     signs = res.json()

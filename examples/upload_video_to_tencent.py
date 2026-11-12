@@ -1,11 +1,11 @@
 """
-当前文件先保留为视频号 uploader 的调试入口 / 历史直连路径。
+This file is kept for now as a debugging entry point / legacy direct path for the WeChat Channels uploader.
 
-注意：
-1. `uploader/tencent_uploader/main.py` 里的核心页面交互逻辑目前是骨架；
-2. 你需要自己补视频里的 `fill_title_and_tags` / `wait_for_upload_complete` / `set_thumbnail` / `submit_publish` 等方法；
-3. 你需要自己补图文里的 `switch_to_note_mode` / `upload_note_images` / `fill_note_title_and_tags` / `submit_publish` 等方法；
-3. 补完后，这个 example 就可以直接作为本地调试入口继续使用。
+Note:
+1. The core page interaction logic in `uploader/tencent_uploader/main.py` is currently a skeleton;
+2. You need to fill in the video methods such as `fill_title_and_tags` / `wait_for_upload_complete` / `set_thumbnail` / `submit_publish` yourself;
+3. You need to fill in the image post methods such as `switch_to_note_mode` / `upload_note_images` / `fill_note_title_and_tags` / `submit_publish` yourself;
+3. Once these are filled in, this example can be used directly as a local debugging entry point.
 """
 
 import asyncio

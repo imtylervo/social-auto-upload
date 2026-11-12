@@ -1,4 +1,4 @@
-"""知乎创作中心页面与上传限制。"""
+"""Zhihu creator center pages and upload limits."""
 from datetime import timedelta, timezone
 
 
@@ -16,7 +16,7 @@ ZHIHU_VIDEO_TITLE_MIN = 5
 ZHIHU_VIDEO_TITLE_MAX = 50
 ZHIHU_VIDEO_DESCRIPTION_MAX = 300
 ZHIHU_VIDEO_TOPICS_MAX = 10
-# 页面按 size > 102400 接收视频，恰好 100KB 也会被拒绝。
+# The page accepts a video only if size > 102400; exactly 100KB is rejected too.
 ZHIHU_VIDEO_MIN_BYTES = 100 * 1024
 ZHIHU_VIDEO_MAX_BYTES = 20 * 1024**3
 ZHIHU_VIDEO_MAX_SECONDS = 4 * 60 * 60
@@ -27,10 +27,10 @@ ZHIHU_VIDEO_EXTENSIONS = {
 }
 ZHIHU_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".heic", ".heif", ".gif"}
 
-# 原创声明使用提交值；CLI 与上传校验共用，避免两处枚举漂移。
+# The originality declaration uses the submitted value; shared by the CLI and the upload check so the two enumerations cannot drift apart.
 ZHIHU_ORIGINALITY = ("original", "reprint")
 
-# 当前领域与声明菜单的完整文案；CLI 展示合法值，提交前仍与实时菜单核对。
+# Full text of the current field (category) and declaration menus; the CLI shows the legal values, and before submitting they are still checked against the live menu.
 ZHIHU_VIDEO_CATEGORIES = (
     "人文", "体育竞技", "健康医学", "其他", "军事", "动漫", "娱乐", "宠物",
     "家居生活", "家用电器", "影视", "心理学", "情感", "故事", "教育", "数码",

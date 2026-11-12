@@ -1,11 +1,11 @@
 #!/bin/bash
 # export_douyin_cookie.sh
-# 导出已登录 Chrome 的抖音 cookie 到 douyin_{8位随机字符}.json
-# 使用 curl 直接调用 Chrome DevTools HTTP API
+# Export the Douyin cookies of a logged-in Chrome to douyin_{8 random characters}.json
+# Uses curl to call the Chrome DevTools HTTP API directly
 
 set -e
 
-# 解析参数
+# Parse arguments
 USERNAME=""
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -14,37 +14,37 @@ while [ $# -gt 0 ]; do
             shift 2
             ;;
         *)
-            echo "用法: $0 --account <用户名>"
+            echo "Usage: $0 --account <username>"
             exit 1
             ;;
     esac
 done
 
 if [ -z "$USERNAME" ]; then
-    echo "未指定用户名，将使用随机文件名"
+    echo "No username given; a random file name will be used"
 fi
 
 DEBUG_PORT=9222
 
 echo "=========================================="
-echo "   抖音 Cookie 导出工具"
+echo "   Douyin Cookie Export Tool"
 echo "=========================================="
 echo ""
 
-# 依赖: curl, python3, websocket-client
+# Dependencies: curl, python3, websocket-client
 
-echo "检查 Chrome remote debugging..."
+echo "Checking Chrome remote debugging..."
 RESPONSE=$(curl -s "http://localhost:${DEBUG_PORT}/json" 2>/dev/null) || true
 
 if ! echo "$RESPONSE" | grep -q "webSocketDebuggerUrl"; then
-    echo "Chrome remote debugging 未运行"
-    echo "请先启动 Chrome: chromium --remote-debugging-port=9222 ..."
+    echo "Chrome remote debugging is not running"
+    echo "Start Chrome first: chromium --remote-debugging-port=9222 ..."
     exit 1
 fi
 
-echo "Chrome remote debugging 已运行"
+echo "Chrome remote debugging is running"
 echo ""
-echo "获取抖音 Cookie..."
+echo "Getting Douyin cookies..."
 
 USERNAME="$USERNAME" python3 << 'PYEOF'
 import json
@@ -52,7 +52,7 @@ import os
 import uuid
 import sys
 
-# Shell 把 USERNAME 作为环境变量传过来, Python 需要显式取
+# The shell passes USERNAME as an environment variable; Python has to read it explicitly
 USERNAME = os.environ.get('USERNAME', '')
 
 DEBUG_PORT = 9222
@@ -65,12 +65,12 @@ def get_douyin_cookies():
     import urllib.request
     import websocket
 
-    # 获取页面列表
+    # Get the list of pages
     url = f"http://localhost:{DEBUG_PORT}/json"
     with urllib.request.urlopen(url, timeout=10) as response:
         pages = json.loads(response.read().decode())
 
-    # 查找抖音创作者页面
+    # Find the Douyin creator page
     douyin_page = None
     for page in pages:
         page_url = page.get("url", "")
@@ -79,42 +79,42 @@ def get_douyin_cookies():
             break
 
     if not douyin_page:
-        print("未找到抖音创作者平台页面")
-        print("请先在 Chrome 中打开并登录 https://creator.douyin.com")
+        print("Douyin creator platform page not found")
+        print("Open https://creator.douyin.com in Chrome and log in first")
         return False
 
     page_url = douyin_page["url"]
     ws_url = douyin_page.get("webSocketDebuggerUrl", "")
 
-    print(f"找到页面: {page_url}")
+    print(f"Found page: {page_url}")
 
-    # 连接到目标页面的 WebSocket
-    print(f"连接页面 WebSocket...")
+    # Connect to the target page's WebSocket
+    print(f"Connecting to the page WebSocket...")
     ws = websocket.create_connection(ws_url, timeout=30)
 
-    # 获取所有 Cookie
+    # Get all cookies
     ws.send(json.dumps({"id": 1, "method": "Network.getAllCookies"}))
     response = json.loads(ws.recv())
 
     cookies = response.get("result", {}).get("cookies", [])
 
-    # 过滤抖音相关的 cookie
+    # Keep only Douyin cookies
     douyin_cookies = [
         c for c in cookies
         if "douyin.com" in c.get("domain", "") or ".douyin.com" in c.get("domain", "")
     ]
 
-    print(f"获取到 {len(douyin_cookies)} 个抖音 Cookie")
+    print(f"Got {len(douyin_cookies)} Douyin cookies")
 
     if len(douyin_cookies) == 0:
-        print("未获取到任何抖音 Cookie，可能未登录")
+        print("No Douyin cookies found; probably not logged in")
         return False
 
-    # 获取 localStorage (origins)
-    print(f"获取 localStorage...")
+    # Get localStorage (origins)
+    print(f"Getting localStorage...")
     local_storage_by_origin = {}
 
-    # 获取页面 frame 树
+    # Get the page's frame tree
     ws.send(json.dumps({"id": 2, "method": "Page.getResourceTree"}))
     resp = json.loads(ws.recv())
     frames = resp.get("result", {}).get("frameTree", {}).get("childFrames", [])
@@ -124,7 +124,7 @@ def get_douyin_cookies():
         frame_url = frame.get("url", "")
         frame_id = frame.get("id", "")
         if "douyin.com" in frame_url or "bytedance.com" in frame_url:
-            # 执行 JavaScript 获取该 frame 的 localStorage
+            # Run JavaScript to get this frame's localStorage
             script = """
             (function() {
                 var result = [];
@@ -148,7 +148,7 @@ def get_douyin_cookies():
                     origin = frame_url.rsplit("/", 2)[0] + "//" + frame_url.split("/")[2]
                     local_storage_by_origin[origin] = items
 
-    # 获取主文档的 localStorage
+    # Get the main document's localStorage
     script_main = """
     (function() {
         var result = [];
@@ -176,7 +176,7 @@ def get_douyin_cookies():
 
     ws.close()
 
-    # 构建 JSON
+    # Build the JSON
     result = {
         "cookies": [],
         "origins": []
@@ -194,7 +194,7 @@ def get_douyin_cookies():
             "sameSite": c.get("sameSite", "Lax")
         })
 
-    # 添加 origins
+    # Add origins
     for origin, items in local_storage_by_origin.items():
         origin_entry = {
             "origin": origin,
@@ -202,17 +202,17 @@ def get_douyin_cookies():
         }
         result["origins"].append(origin_entry)
 
-    # 保存
+    # Save
     os.makedirs("cookies", exist_ok=True)
     with open(COOKIE_FILE, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
-    print(f"Cookie 已保存到: {COOKIE_FILE}")
+    print(f"Cookies saved to: {COOKIE_FILE}")
     print("")
 
-    # 打印关键 Cookie
+    # Print the key cookies
     key_cookies = ["sessionid", "uid_tt", "ssid", "ttwid"]
-    print("关键 Cookie:")
+    print("Key cookies:")
     for c in douyin_cookies:
         if c.get("name") in key_cookies:
             val = c.get("value", "")
@@ -229,5 +229,5 @@ PYEOF
 
 echo ""
 echo "=========================================="
-echo "   完成！文件已导出为$COOKIE_FILE"
+echo "   Done! File exported as $COOKIE_FILE"
 echo "=========================================="

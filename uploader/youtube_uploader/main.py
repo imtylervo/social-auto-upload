@@ -22,8 +22,8 @@ from utils.base_social_media import set_init_script
 from utils.log import youtube_logger
 
 try:
-    # 国内直连 youtube.com 会超时，且 patchright 启的 chromium 不吃系统代理。
-    # 在 conf.py 设 YT_PROXY = "http://127.0.0.1:7890"（本地代理端口）即可；不设则不走代理。
+    # A direct connection to youtube.com from mainland China times out, and the Chromium started by patchright ignores the system proxy.
+    # Set YT_PROXY = "http://127.0.0.1:7890" (local proxy port) in conf.py; without it no proxy is used.
     from conf import YT_PROXY
 except Exception:
     YT_PROXY = None
@@ -48,7 +48,7 @@ def _build_login_result(success, status, message, account_file, current_url=""):
 
 
 async def cookie_auth(account_file) -> bool:
-    """登录态是否仍有效：带 cookie 打开 Studio，没被踢到 Google 登录页且进入了频道页即有效。"""
+    """Is the login state still valid: open Studio with the cookies; valid if not sent to the Google login page and the channel page loads."""
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(headless=True, channel="chrome")
         try:
@@ -68,39 +68,39 @@ async def cookie_auth(account_file) -> bool:
 
 
 async def youtube_cookie_gen(account_file, headless: bool = False):
-    """交互式登录：开浏览器让用户登录 Google/YouTube，进入频道页后保存 storage_state。"""
+    """Interactive login: open a browser for the user to sign in to Google/YouTube, then save storage_state once the channel page loads."""
     async with async_playwright() as playwright:
-        # 登录必须显形，让用户输账号密码/二步验证
+        # Login must be visible so the user can enter the password / two-step verification
         browser = await playwright.chromium.launch(headless=False, channel="chrome")
         context = await browser.new_context()
         context = await set_init_script(context)
         page = await context.new_page()
         await page.goto(STUDIO_URL, wait_until="domcontentloaded")
-        youtube_logger.info(_msg("🔐", "请在弹出的浏览器里登录 Google / YouTube 账号，登录后会自动保存"))
+        youtube_logger.info(_msg("🔐", "Sign in to your Google / YouTube account in the browser that opened; the login is saved automatically"))
         ok = False
-        for _ in range(600):  # 最多等 10 分钟
+        for _ in range(600):  # wait at most 10 minutes
             if "/channel/" in page.url:
-                await page.wait_for_timeout(2000)  # 让 cookie 落定
+                await page.wait_for_timeout(2000)  # let the cookies settle
                 ok = True
                 break
             await asyncio.sleep(1)
         if ok:
             await context.storage_state(path=account_file)
-            youtube_logger.success(_msg("✅", f"YouTube 登录态已保存: {account_file}"))
+            youtube_logger.success(_msg("✅", f"YouTube login state saved: {account_file}"))
         else:
-            youtube_logger.error(_msg("😵", "等待登录超时，未保存登录态"))
+            youtube_logger.error(_msg("😵", "Timed out waiting for login; login state not saved"))
         await browser.close()
         return _build_login_result(ok, "logged_in" if ok else "timeout",
                                    "登录成功" if ok else "登录超时", account_file, page.url)
 
 
 async def youtube_setup(account_file, handle: bool = False, return_detail: bool = False, headless: bool = False):
-    """校验登录态，失效且 handle=True 时拉起交互式登录。"""
+    """Check the login state; if it is invalid and handle=True, start the interactive login."""
     if not Path(account_file).exists() or not await cookie_auth(account_file):
         if not handle:
             result = _build_login_result(False, "cookie_invalid", "登录态不存在或已失效", account_file)
             return result if return_detail else False
-        youtube_logger.info(_msg("🥹", "YouTube 登录态不存在或失效，准备打开浏览器登录"))
+        youtube_logger.info(_msg("🥹", "YouTube login state missing or expired, opening a browser to log in"))
         result = await youtube_cookie_gen(account_file, headless=headless)
         return result if return_detail else result["success"]
     result = _build_login_result(True, "cookie_valid", "登录态有效", account_file)
@@ -108,10 +108,10 @@ async def youtube_setup(account_file, handle: bool = False, return_detail: bool 
 
 
 async def _dismiss_autocomplete(page: Page):
-    """关掉 # 话题 / @ 提及 自动补全下拉浮层（会挡住后续“继续/发布”按钮）。
+    """Close the # hashtag / @ mention autocomplete dropdown (it covers the later Next / Publish buttons).
 
-    先 blur 失焦；若浮层仍可见再补一次 Escape——仅在检测到浮层时才按，
-    避免在没有浮层时误关掉整个上传对话框。"""
+    First blur the field; if the dropdown is still visible, press Escape once. Escape is only pressed when a dropdown
+    is detected, so it cannot close the whole upload dialog when there is none."""
     try:
         await page.evaluate("() => { const a = document.activeElement; if (a && a.blur) a.blur(); }")
     except Exception:
@@ -126,22 +126,22 @@ async def _dismiss_autocomplete(page: Page):
 
 
 async def _fill_editable(page: Page, selector: str, text: str):
-    """填 YouTube Studio 的 contenteditable 富文本框（标题/简介），先清空再输入。
+    """Fill a contenteditable rich-text box in YouTube Studio (title/description): clear it first, then enter the text.
 
-    用 fill() 一次性灌入而非逐字 type()：标题/简介里的 # 字符（如 #Shorts）会触发
-    YouTube 的话题自动补全下拉浮层；逐字输入会让浮层持续跟随光标弹出、盖住输入框与
-    后续“继续/发布”按钮，导致上传流程卡死。fill() 一次性写入不会逐字触发补全。"""
+    Use fill() to insert everything at once instead of type() character by character: a # in the title/description
+    (e.g. #Shorts) triggers YouTube's hashtag autocomplete dropdown. Typing character by character keeps the dropdown
+    following the cursor, covering the input and the later Next / Publish buttons, and the upload gets stuck. fill() writes it in one go and does not trigger autocomplete per character."""
     box = page.locator(selector).first
     await box.wait_for(state="visible", timeout=30000)
     await box.click()
     await page.keyboard.press("Control+A")
     await page.keyboard.press("Delete")
     try:
-        await box.fill(text)            # 一次性灌入，不逐字触发 # 话题自动补全
+        await box.fill(text)            # insert at once, so # hashtag autocomplete is not triggered per character
     except Exception:
-        await box.type(text, delay=6)   # 个别 contenteditable 不支持 fill 时退回逐字输入
+        await box.type(text, delay=6)   # fall back to per-character typing when a contenteditable does not support fill
     await page.wait_for_timeout(400)
-    await _dismiss_autocomplete(page)   # 收尾关掉可能弹出的补全浮层
+    await _dismiss_autocomplete(page)   # finally close any autocomplete dropdown that popped up
 
 
 async def _click_if_present(page: Page, selector: str, timeout: int = 4000) -> bool:
@@ -155,9 +155,9 @@ async def _click_if_present(page: Page, selector: str, timeout: int = 4000) -> b
 
 
 async def _wait_upload_complete(page: Page, max_polls: int = 360) -> bool:
-    """等网页上传从 X% 跑到 100% 再发布。浏览器上传靠窗口开着才传得完，
-    若上传到一半就点发布并关闭浏览器，上传会被掐断卡在中途（如 76%）。
-    出现“处理/检查/上传完成”或不再“正在上传”即视为传完。max_polls*5s=30min 上限。"""
+    """Wait for the web upload to go from X% to 100% before publishing. A browser upload only finishes while the window stays open;
+    clicking Publish halfway and closing the browser cuts the upload off mid-way (e.g. at 76%).
+    The upload counts as done when “处理/检查/上传完成” (processing / checks / upload complete) shows, or “正在上传” (uploading) is gone. Limit: max_polls*5s = 30 min."""
     last = ""
     for _ in range(max_polls):
         txt = ""
@@ -172,13 +172,13 @@ async def _wait_upload_complete(page: Page, max_polls: int = 360) -> bool:
                 pass
         if txt:
             if any(k in txt for k in ("处理", "检查", "上传完成", "已上传", "Processing", "complete", "Checks", "Finished")):
-                youtube_logger.info(_msg("✅", f"上传完成: {txt[:40]}"))
+                youtube_logger.info(_msg("✅", f"Upload complete: {txt[:40]}"))
                 return True
             if txt != last:
-                youtube_logger.info(_msg("⏳", f"上传中: {txt[:40]}"))
+                youtube_logger.info(_msg("⏳", f"Uploading: {txt[:40]}"))
                 last = txt
         await page.wait_for_timeout(5000)
-    youtube_logger.warning(_msg("⚠️", "等上传超时(30min)，仍尝试发布"))
+    youtube_logger.warning(_msg("⚠️", "Timed out waiting for upload (30 min), trying to publish anyway"))
     return False
 
 
@@ -207,31 +207,31 @@ class YouTubeVideo(BaseVideoUploader):
         page = await context.new_page()
         page.set_default_timeout(60000)
 
-        youtube_logger.info(_msg("🎬", f"开始上传: {Path(self.file_path).name}"))
+        youtube_logger.info(_msg("🎬", f"Start uploading: {Path(self.file_path).name}"))
         await page.goto(UPLOAD_URL, wait_until="domcontentloaded")
         await page.wait_for_timeout(3000)
         if "accounts.google.com" in page.url or "signin" in page.url.lower():
             await browser.close()
-            raise RuntimeError("YouTube 登录态失效，请重新执行 login")
+            raise RuntimeError("YouTube login state expired, run login again")
 
-        # 1) 选择视频文件
+        # 1) Select the video file
         file_input = page.locator('input[type="file"]').first
         await file_input.wait_for(state="attached", timeout=60000)
         await file_input.set_input_files(self.file_path)
 
-        # 2) 等详情对话框
+        # 2) Wait for the details dialog
         await page.locator("#title-textarea").wait_for(state="visible", timeout=120000)
 
-        # 3) 标题
-        youtube_logger.info(_msg("✍️", "填写标题"))
+        # 3) Title
+        youtube_logger.info(_msg("✍️", "Filling in title"))
         await _fill_editable(page, "#title-textarea #textbox", self.title[:100])
 
-        # 4) 简介
+        # 4) Description
         if self.description.strip():
-            youtube_logger.info(_msg("✍️", "填写简介"))
+            youtube_logger.info(_msg("✍️", "Filling in description"))
             await _fill_editable(page, "#description-textarea #textbox", self.description)
 
-        # 5) 封面（处理到一定进度才允许传，失败不致命）
+        # 5) Thumbnail (only allowed after processing reaches a certain point; failure is not fatal)
         if self.thumbnail_path and Path(self.thumbnail_path).exists():
             try:
                 thumb_input = page.locator(
@@ -240,11 +240,11 @@ class YouTubeVideo(BaseVideoUploader):
                 await thumb_input.wait_for(state="attached", timeout=20000)
                 await thumb_input.set_input_files(self.thumbnail_path)
                 await page.wait_for_timeout(2000)
-                youtube_logger.info(_msg("🖼️", "封面已上传"))
+                youtube_logger.info(_msg("🖼️", "Thumbnail uploaded"))
             except Exception as exc:
-                youtube_logger.warning(_msg("⚠️", f"封面上传跳过（不影响发布）: {exc}"))
+                youtube_logger.warning(_msg("⚠️", f"Thumbnail upload skipped (publishing not affected): {exc}"))
 
-        # 6) 加入播放列表（连载/系列追更）。弹窗务必关闭，否则挡住后续步骤。
+        # 6) Add to a playlist (for a series). The dialog must be closed, or it blocks the next steps.
         if self.playlist:
             try:
                 await _click_if_present(
@@ -265,17 +265,17 @@ class YouTubeVideo(BaseVideoUploader):
                             await title_box.type(self.playlist, delay=6)
                             await _click_if_present(page, "ytcp-button#create-button, tp-yt-paper-dialog ytcp-button:has-text('Create'), tp-yt-paper-dialog ytcp-button:has-text('创建')", 4000)
             except Exception as exc:
-                youtube_logger.warning(_msg("⚠️", f"播放列表处理跳过（不影响发布）: {exc}"))
+                youtube_logger.warning(_msg("⚠️", f"Playlist step skipped (publishing not affected): {exc}"))
             finally:
                 await _click_if_present(page, "ytcp-playlist-dialog #save-button, ytcp-button:has-text('Done'), ytcp-button:has-text('完成')", 3000)
                 await page.keyboard.press("Escape")
                 await page.wait_for_timeout(600)
 
-        # 7) 受众：非儿童向（必填）
+        # 7) Audience: not made for kids (required)
         if not await _click_if_present(page, "tp-yt-paper-radio-button[name='VIDEO_MADE_FOR_KIDS_NOT_MFK']", 10000):
             await _click_if_present(page, "tp-yt-paper-radio-button:has-text('not made for kids'), tp-yt-paper-radio-button:has-text('不是面向儿童')", 6000)
 
-        # 8) 标签（“显示更多”里）
+        # 8) Tags (under "Show more")
         if self.tags:
             try:
                 await _click_if_present(page, "#toggle-button", 6000)
@@ -284,9 +284,9 @@ class YouTubeVideo(BaseVideoUploader):
                 await tag_input.click()
                 await tag_input.type(",".join(self.tags)[:500] + ",", delay=4)
             except Exception as exc:
-                youtube_logger.warning(_msg("⚠️", f"标签填写跳过（不影响发布）: {exc}"))
+                youtube_logger.warning(_msg("⚠️", f"Tags skipped (publishing not affected): {exc}"))
 
-        # 9) 连点 Next 到“可见性”步骤
+        # 9) Click Next repeatedly until the Visibility step
         for _ in range(5):
             vis = page.locator("tp-yt-paper-radio-button[name='PUBLIC']")
             if await vis.count() and await vis.first.is_visible():
@@ -295,19 +295,19 @@ class YouTubeVideo(BaseVideoUploader):
                 await page.wait_for_timeout(1200)
             await page.wait_for_timeout(1000)
 
-        # 10) 可见性
-        youtube_logger.info(_msg("🌐", f"设置可见性 = {self.visibility}"))
+        # 10) Visibility
+        youtube_logger.info(_msg("🌐", f"Set visibility = {self.visibility}"))
         await _click_if_present(page, f"tp-yt-paper-radio-button[name='{VISIBILITY[self.visibility]}']", 10000)
 
-        # 10.5) 关键：等上传真正传完再发布。浏览器上传靠窗口开着传，
-        #       传到一半就点发布+关浏览器 = 上传被掐断卡在中途（如 76%）。
-        youtube_logger.info(_msg("📤", "等待上传完成（传完才发布）…"))
+        # 10.5) Important: wait until the upload has really finished before publishing. A browser upload needs the window open;
+        #       clicking Publish halfway and closing the browser cuts the upload off mid-way (e.g. at 76%).
+        youtube_logger.info(_msg("📤", "Waiting for the upload to finish (publish only after it completes)…"))
         await _wait_upload_complete(page)
 
-        # 11) 发布
+        # 11) Publish
         await page.wait_for_timeout(1200)
         if not await _click_if_present(page, "#done-button", 15000):
-            youtube_logger.warning(_msg("🤔", "未找到发布按钮，可能上传未到可发布进度；请在窗口里手动发布"))
+            youtube_logger.warning(_msg("🤔", "Publish button not found; the upload may not be far enough to publish yet. Publish manually in the window"))
         else:
             await page.wait_for_timeout(4000)
             video_url = ""
@@ -318,9 +318,9 @@ class YouTubeVideo(BaseVideoUploader):
             except Exception:
                 pass
             await _click_if_present(page, "ytcp-button:has-text('Close'), ytcp-button:has-text('关闭'), #close-button", 8000)
-            youtube_logger.success(_msg("🥳", f"发布完成（{self.visibility}）{(' ' + video_url) if video_url else ''}"))
+            youtube_logger.success(_msg("🥳", f"Published ({self.visibility}){(' ' + video_url) if video_url else ''}"))
 
-        # 刷新 cookie
+        # Refresh cookies
         try:
             await context.storage_state(path=self.account_file)
         except Exception:

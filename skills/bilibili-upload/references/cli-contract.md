@@ -1,41 +1,41 @@
-# Bilibili CLI 契约
+# Bilibili CLI contract
 
-这个 skill 默认假设当前环境已经安装并可调用 `sau` 命令。
+This skill assumes that `sau` is installed and callable in the current environment.
 
-## 命令列表
+## Commands
 
-### 登录
+### Login
 
 ```bash
 sau bilibili login --account <account>
 ```
 
-- 必填参数：
+- Required arguments:
   - `--account`
-- 作用：
-  - 自动准备 `biliup`
-  - 触发 Bilibili 登录流程
-- 账号说明：
-  - `--account` 传的是用户自定义的 `account_name`，不是固定只能叫 `creator`
-  - 一个 `account_name` 对应一个账号文件，可用于多账号隔离和并发任务
-- 登录方式说明：
-  - 这个命令应该由用户自己在本地真实终端里运行
-  - 如果终端二维码显示不完整，可直接打开当前目录下的 `qrcode.png` 扫码
-  - agent 不应该在非交互环境里硬跑这个命令
+- Purpose:
+  - Prepares `biliup` automatically
+  - Triggers the Bilibili login flow
+- About accounts:
+  - `--account` takes a user-defined `account_name`; it does not have to be `creator`
+  - One `account_name` corresponds to one account file, which can be used to isolate multiple accounts and run tasks concurrently
+- About how to log in:
+  - This command should be run by the user in a real local terminal
+  - If the terminal QR code is displayed incompletely, open `qrcode.png` in the current directory and scan it
+  - The agent should not force this command to run in a non-interactive environment
 
-### 校验账号
+### Check the account
 
 ```bash
 sau bilibili check --account <account>
 ```
 
-- 必填参数：
+- Required arguments:
   - `--account`
-- 预期输出：
+- Expected output:
   - `valid`
   - `invalid`
 
-### 上传视频
+### Upload a video
 
 ```bash
 sau bilibili upload-video \
@@ -48,19 +48,19 @@ sau bilibili upload-video \
   [--schedule "YYYY-MM-DD HH:MM"]
 ```
 
-- 必填参数：
+- Required arguments:
   - `--account`
   - `--file`
   - `--title`
   - `--desc`
   - `--tid`
-- 可选参数：
+- Optional arguments:
   - `--tags`
   - `--schedule`
 
-## 额外说明
+## Additional notes
 
-- `--tid` 第一版必须传
-- `--tags` 使用逗号分隔
-- `--schedule` 走 `sau` 统一时间格式
-- 程序会自动准备和更新 `biliup`
+- `--tid` is required in this first version
+- `--tags` is comma-separated
+- `--schedule` uses the common `sau` time format
+- The program prepares and updates `biliup` automatically

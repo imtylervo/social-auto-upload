@@ -1,4 +1,4 @@
-"""facebook 的命令参数与执行逻辑。"""
+"""Command arguments and execution logic for facebook."""
 from __future__ import annotations
 import json
 from dataclasses import dataclass
@@ -22,24 +22,24 @@ from sau_commands.arguments import (
 
 
 def register(platform_parsers):
-    """声明本平台命令、参数及合法选项。"""
+    """Declare this platform's commands, arguments and allowed options."""
     schedule_help = SCHEDULE_FORMAT.replace("%", "%%")
     facebook_parser = platform_parsers.add_parser("facebook", help="Facebook personal post operations")
     facebook_actions = facebook_parser.add_subparsers(dest="action", required=True)
 
     for action in ("verify", "delete"):
-        post_parser = facebook_actions.add_parser(action, help="核对原作品" if action == "verify" else "核对原作品后移至垃圾箱（30 天后平台删除）")
+        post_parser = facebook_actions.add_parser(action, help="Check the original post" if action == "verify" else "Check the original post, then move it to the trash (the platform deletes it after 30 days)")
         post_parser.add_argument("--account", required=True)
-        post_parser.add_argument("--post-url", required=True, help="原作品的 Facebook 链接")
-        post_parser.add_argument("--owner-id", required=True, help="原作品所属个人主页的数字 ID")
-        post_parser.add_argument("--expected-text", required=True, help="原作品中用于交叉核验的正文")
-        post_parser.add_argument("--result", type=Path, help="保存查询或删除结果 JSON")
-        post_parser.add_argument("--from-trash", action="store_true", help="原作品已在垃圾箱，从垃圾箱核验")
+        post_parser.add_argument("--post-url", required=True, help="Facebook link of the original post")
+        post_parser.add_argument("--owner-id", required=True, help="Numeric ID of the profile that owns the original post")
+        post_parser.add_argument("--expected-text", required=True, help="Text of the original post, used for cross-checking")
+        post_parser.add_argument("--result", type=Path, help="Save the lookup or deletion result as JSON")
+        post_parser.add_argument("--from-trash", action="store_true", help="The original post is already in the trash; verify it there")
         if action == "delete":
-            post_parser.add_argument("--permanent", action="store_true", help="将核实的原作品从垃圾箱永久删除（无法恢复）")
+            post_parser.add_argument("--permanent", action="store_true", help="Permanently delete the verified original post from the trash (cannot be undone)")
         else:
-            post_parser.add_argument("--deleted", action="store_true", help="只查询垃圾箱原 ID 是否已删除，不执行删除")
-        post_parser.add_argument("--proxy", default=FACEBOOK_PROXY, help="代理地址；不传时直连")
+            post_parser.add_argument("--deleted", action="store_true", help="Only check whether the original ID has been deleted from the trash; do not delete anything")
+        post_parser.add_argument("--proxy", default=FACEBOOK_PROXY, help="Proxy address; connect directly when omitted")
         add_runtime_flags(post_parser)
         post_parser.set_defaults(headless=False)
 
@@ -49,11 +49,11 @@ def register(platform_parsers):
         action_parser.add_argument(
             "--proxy",
             default=FACEBOOK_PROXY,
-            help="浏览器代理地址；不传时直连，传空字符串可覆盖环境变量并直连",
+            help="Browser proxy address; connect directly when omitted; pass an empty string to override the environment variable and connect directly",
         )
         if action_name == "login":
             add_runtime_flags(action_parser)
-            # Facebook 登录必须在可见 Chrome 中完成，避免无头模式下用户看不到登录挑战。
+            # Facebook login must be completed in a visible Chrome; in headless mode the user cannot see the login challenge.
             action_parser.set_defaults(headless=False)
 
     facebook_upload_video_parser = facebook_actions.add_parser(
@@ -67,17 +67,17 @@ def register(platform_parsers):
     facebook_upload_video_parser.add_argument(
         "--proxy",
         default=FACEBOOK_PROXY,
-        help="浏览器代理地址；不传时直连，传空字符串可覆盖环境变量并直连",
+        help="Browser proxy address; connect directly when omitted; pass an empty string to override the environment variable and connect directly",
     )
     add_runtime_flags(facebook_upload_video_parser)
 
-    facebook_note = facebook_actions.add_parser("upload-note", help="向个人主页发布图片及正文")
+    facebook_note = facebook_actions.add_parser("upload-note", help="Publish images and text to the profile")
     facebook_note.add_argument("--account", required=True)
     facebook_note.add_argument("--images", required=True, nargs="+", type=existing_file_path)
     facebook_note.add_argument("--title", required=True)
     facebook_note.add_argument("--note", default="")
     facebook_note.add_argument("--tags", default="")
-    facebook_note.add_argument("--proxy", default=FACEBOOK_PROXY, help="代理地址；不传时直连")
+    facebook_note.add_argument("--proxy", default=FACEBOOK_PROXY, help="Proxy address; connect directly when omitted")
     add_runtime_flags(facebook_note)
     facebook_note.set_defaults(headless=False)
 
@@ -125,8 +125,8 @@ async def upload_facebook_video(request: FacebookVideoUploadRequest) -> Path:
     )
     if not is_ready:
         raise RuntimeError(
-            f"Facebook 登录态不存在或已失效: {account_file}. "
-            f"请先执行 `sau facebook login --account {request.account_name}`。"
+            f"Facebook login state is missing or expired: {account_file}. "
+            f"Run `sau facebook login --account {request.account_name}` first."
         )
 
     app = FacebookVideo(
@@ -143,7 +143,7 @@ async def upload_facebook_video(request: FacebookVideoUploadRequest) -> Path:
 
 
 async def run(args):
-    """执行本平台命令；发布结果由平台实现核验。"""
+    """Run this platform's command; the platform implementation verifies the publish result."""
     if args.action == "upload-note":
         for image in args.images:
             BaseVideoUploader.validate_image_file(image)

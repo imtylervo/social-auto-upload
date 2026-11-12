@@ -1,4 +1,4 @@
-"""CLI 共用的路径、标签和时间参数规则。"""
+"""Shared CLI rules for path, tag and time arguments."""
 from __future__ import annotations
 import argparse
 import sys

@@ -1,6 +1,6 @@
-# CLI 使用说明
+# CLI Guide
 
-项目现在提供一个统一的 CLI 入口 `sau`，当前主线已经接入：
+The project now provides one unified CLI entry, `sau`. The main line currently supports:
 
 - `douyin`
 - `kuaishou`
@@ -12,31 +12,31 @@
 - `weibo`
 - `hupu`
 - `youtube`
-- `facebook`：Facebook 个人主页视频/图文立即发布、查询和删除
-- `facebook-page`：Meta Business Suite 的 Facebook Page 视频/图文立即或定时发布
+- `facebook`: immediate publishing, lookup and deletion of videos/image posts on a Facebook personal profile
+- `facebook-page`: immediate or scheduled publishing of videos/image posts to a Facebook Page through Meta Business Suite
 - `dayu`
-- `xueqiu`：HTML/Markdown/TXT 长文、原位置配图及封面，默认实际发表，支持按原作品 ID 查询结果；见 [雪球使用说明](./xueqiu.md)，已实测正式 CLI 发表及后台核验
-- `zhihu`：文章、视频和定时发布；见仓库内 [知乎 Skill](../skills/zhihu-upload/SKILL.md)
+- `xueqiu`: HTML/Markdown/TXT long articles, images at their original positions, and covers. It publishes for real by default and supports querying the result by original work ID. See the [Xueqiu guide](./xueqiu.md). Publishing through the official CLI and backend verification have been tested
+- `zhihu`: articles, videos and scheduled publishing. See the [Zhihu Skill](../skills/zhihu-upload/SKILL.md) in the repository
 
-文章本地处理命令为 `sau article`，支持主题列表、环境准备和 Markdown/HTML 文件渲染，见 [文章文件与主题渲染](./article.md)。
+The local article processing command is `sau article`. It supports listing themes, preparing the environment, and rendering Markdown/HTML files. See [Article Files and Theme Rendering](./article.md).
 
-面向 Agent 的 Skills 包括一个跨平台总入口和各已支持平台的独立入口，完整清单见 [README 的 AI Agent 区域](../README.md#ai-agent)。TikTok 使用仓库现有 Chrome 上传器，没有 `sau tiktok` 命令；见 [TikTok Skill](../skills/tiktok-upload/SKILL.md)。
+The Skills for agents include one cross-platform entry point and a separate entry point for each supported platform. For the full list, see the [AI Agent section of the README](../README.md#ai-agent). TikTok uses the Chrome uploader already in the repository and has no `sau tiktok` command. See the [TikTok Skill](../skills/tiktok-upload/SKILL.md).
 
-实现说明：
+Implementation notes:
 
-- `sau_cli.py` 负责组装命令和启动执行；`sau_commands/<平台>.py` 各自维护参数、请求数据和执行逻辑，`sau_commands/arguments.py` 维护共用参数规则
-- `sau.exe` 是安装后在 Windows 虚拟环境里自动生成的命令入口，本质上还是调用 `sau_cli.py`
-- 如果需要给 OpenClaw、Codex 等 Agent 使用，可安装仓库 `skills/` 下的总入口或任一平台入口；发布渠道和安装方式见 [Skill 分发说明](./skill-distribution.md)。
+- `sau_cli.py` assembles the commands and starts execution. `sau_commands/<platform>.py` each maintain their own options, request data and execution logic. `sau_commands/arguments.py` maintains the shared option rules
+- `sau.exe` is the command entry generated automatically in the Windows virtual environment after installation. It still just calls `sau_cli.py`
+- To use it with agents such as OpenClaw and Codex, install the entry point or any platform entry under the repository's `skills/`. For publishing channels and install methods, see [Skill Distribution and Publishing](./skill-distribution.md).
 
-## 安装 CLI 入口
+## Install the CLI entry
 
-如果你希望直接使用 `sau` 命令，而不是手动执行 `python sau_cli.py`，先在项目根目录安装一次：
+If you want to use the `sau` command directly instead of running `python sau_cli.py` by hand, install once in the project root:
 
 ```bash
 uv pip install -e .
 ```
 
-安装后就可以直接使用：
+After that you can use it directly:
 
 ```bash
 sau douyin --help
@@ -56,278 +56,280 @@ sau xueqiu --help
 sau zhihu --help
 ```
 
-## 安装 patchright 浏览器
+## Install the patchright browser
 
-Windows 下推荐先指定镜像，再安装 Chromium：
+On Windows, set a mirror first, then install Chromium:
 
 ```powershell
 $env:PLAYWRIGHT_DOWNLOAD_HOST="https://npmmirror.com/mirrors/playwright"; patchright install chromium
 ```
 
-## 大鱼号 CLI 子命令
+## Dayu CLI subcommands
 
-登录、分类和来源选项见 [视频发布](./dayu.md)；正文文件、格式和图片路径见 [图文发布](./dayu-article.md)。Markdown 主题及独立本地渲染命令见 [文章文件与主题渲染](./article.md)。
+For login, categories and source options, see [Video publishing](./dayu.md). For body files, formats and image paths, see [Image post publishing](./dayu-article.md). For Markdown themes and the standalone local render command, see [Article Files and Theme Rendering](./article.md).
 
 ```powershell
+# --title "如何阅读作品数据面板" = "How to read the work data dashboard"; --source "无需标注" = "No label needed"
 sau dayu upload-article --account creator --title "如何阅读作品数据面板" --content-file examples/dayu_article.html --source "无需标注" --cover-indices 1
 
-# Markdown 首次使用需要 Node.js 22+，先安装渲染依赖
+# Markdown needs Node.js 22+ the first time; install the rendering dependencies first
 sau article setup
 sau dayu upload-article --account creator --title "如何阅读作品数据面板" --content-file examples/article.md --theme modern --source "无需标注" --cover-indices 1
 ```
 
-Markdown 默认主题为 `default`，可选 `default/grace/simple/modern/plain`；HTML/TXT 不使用 `--theme`。主题会自动转换为大鱼号兼容排版，保留文字颜色、背景和近似字号，圆角、字体和间距等效果可能与本地预览不同。确认发表前会检查服务端预览；平台确认最终发表后即返回成功，不等待审核。
+The default Markdown theme is `default`. The options are `default/grace/simple/modern/plain`. HTML/TXT do not use `--theme`. A theme is automatically converted to Dayu-compatible layout, which keeps text color, background and approximate font size. Rounded corners, fonts and spacing may differ from the local preview. The server-side preview is checked before the publish is confirmed. The command returns success once the platform confirms the final publish, without waiting for review.
 
-视频和文章均支持 `--schedule "YYYY-MM-DD HH:MM"`：北京时间 2 小时后至 7 天内，分钟为 5 的倍数。平台确认原作品和定时安排后即成功，不等待到点。使用结果文件执行 `sau dayu verify --account creator --result "本次结果文件.json"` 可只读核对原作品与时间，勿重新上传。Agent 可使用仓库的 [大鱼号 Skill](../skills/dayu-upload/SKILL.md)。
+Both videos and articles support `--schedule "YYYY-MM-DD HH:MM"`: Beijing time, 2 hours to 7 days ahead, with minutes a multiple of 5. It succeeds once the platform confirms the original work and the schedule, without waiting for the time to arrive. Run `sau dayu verify --account creator --result "this_result_file.json"` with the result file to check the original work and its time read-only. Do not upload again. Agents can use the repository's [Dayu Skill](../skills/dayu-upload/SKILL.md).
 
-## 知乎 CLI 子命令
+## Zhihu CLI subcommands
 
-知乎提供文章和视频发布。文章使用 HTML/Markdown/TXT 原稿，正文图片按原稿位置导入；视频文件须大于 100KB（102400 字节）、最大 20GB、最长 4 小时。
+Zhihu supports publishing articles and videos. Articles use HTML/Markdown/TXT source files, and body images are imported at their positions in the source. A video file must be larger than 100KB (102400 bytes), at most 20GB, and at most 4 hours long.
 
 ```powershell
 sau zhihu login --account creator
 sau zhihu check --account creator
-sau zhihu upload-article --account creator --title "知乎文章标题" --content-file examples/article.md
-sau zhihu upload-video --account creator --file videos/demo.mp4 --title "知乎视频标题" --desc "视频简介" --originality original --category "教育" --video-mark "含 AI 生成内容"
-# 上传素材后导出该表单的全部领域和视频标记；不发表，但可能留下草稿。
-sau zhihu upload-video --account creator --file videos/demo.mp4 --title "知乎视频标题" --originality original --show-options
+sau zhihu upload-article --account creator --title "Zhihu article title" --content-file examples/article.md
+# --category "教育" = Education; --video-mark "含 AI 生成内容" = Contains AI-generated content
+sau zhihu upload-video --account creator --file videos/demo.mp4 --title "Zhihu video title" --desc "Video description" --originality original --category "教育" --video-mark "含 AI 生成内容"
+# After uploading the material, export all topics and video marks of that form. Nothing is published, but a draft may be left behind.
+sau zhihu upload-video --account creator --file videos/demo.mp4 --title "Zhihu video title" --originality original --show-options
 ```
 
-`--account` 是本地会话别名，与知乎展示名无须相同。登录命令读取页面当前身份并保存本地会话。
+`--account` is a local session alias and does not need to match the Zhihu display name. The login command reads the identity currently shown on the page and saves a local session.
 
-`--category` 与 `--video-mark` 使用 CLI 可选值，完整领域清单见 `sau zhihu upload-video --help`。省略时在交互终端按编号选择；非交互调用必须指定。程序提交前仍核对实时菜单，`--show-options` 将候选写入结果 JSON 的 `options`。
+`--category` and `--video-mark` use the CLI's selectable values. For the full list of topics, see `sau zhihu upload-video --help`. When omitted, you pick by number in an interactive terminal. Non-interactive calls must specify them. Before submitting, the program still checks the live menu. `--show-options` writes the candidates to `options` in the result JSON.
 
-`--originality` 可选 `original`（原创）、`reprint`（转载）。`--video-mark` 可选 `内容无需标注`、`含 AI 生成内容`、`含虚构演绎内容`、`内容含营销信息`、`内容为转载`、`个人观点仅供参考`，须按实际内容选择。视频标题 5–50 字，简介最多 300 字；暂不支持自动选择话题、自定义封面、专栏和内容来源。
+`--originality` accepts `original` or `reprint` (repost). `--video-mark` accepts `内容无需标注` (no label needed), `含 AI 生成内容` (contains AI-generated content), `含虚构演绎内容` (contains fictional dramatization), `内容含营销信息` (contains marketing information), `内容为转载` (content is a repost), `个人观点仅供参考` (personal opinion, for reference only). Choose according to the real content. A video title is 5–50 characters and the description is at most 300 characters. Automatic topic selection, custom covers, columns and content sources are not supported yet.
 
-文章标题最多 100 字。图片写在原稿里，例如 `![配图](images/1.png)`，相对路径从原稿目录解析。提交前核对文字、图片位置、基本格式和链接；恢复非空草稿时停止以保护原文。Markdown 首次使用先执行 `sau article setup`。暂不支持自定义主题 CSS、手动封面、专栏收录和文档导入。
+An article title is at most 100 characters. Images are written in the source, for example `![image](images/1.png)`, and relative paths are resolved from the source directory. Before submitting, the text, image positions, basic formatting and links are checked. When a non-empty draft is restored, the program stops to protect the original text. For Markdown, run `sau article setup` the first time. Custom theme CSS, manual covers, adding to a column and document import are not supported yet.
 
-文章和视频加 `--prepare-only` 可只填写检查，平台仍可能自动保存草稿。`published` 表示平台确认发表；结果为 `submission_unknown` 时先检查创作中心原作品，勿重复上传。已有链接时用 `sau zhihu verify --account creator --result "本次结果.json"` 核对，视频详情地址可为 `/pin/<作品ID>`。
+Add `--prepare-only` to an article or video to only fill in and check. The platform may still save a draft automatically. `published` means the platform confirmed the publish. When the result is `submission_unknown`, first check the original work in the creator center and do not upload again. If you already have a link, check it with `sau zhihu verify --account creator --result "this_result.json"`. The video detail URL can be `/pin/<work ID>`.
 
-`--schedule "YYYY-MM-DD HH:MM"` 为实验性选项，按北京时间限制在 30 分钟后至 48 小时内，尚不保证完整排期流程可用。更多用法见 [知乎 Skill](../skills/zhihu-upload/SKILL.md)。
+`--schedule "YYYY-MM-DD HH:MM"` is experimental. In Beijing time it is limited to between 30 minutes and 48 hours ahead, and the full scheduling flow is not guaranteed to work yet. For more usage, see the [Zhihu Skill](../skills/zhihu-upload/SKILL.md).
 
-## 抖音 CLI 子命令
+## Douyin CLI subcommands
 
 ```bash
 sau douyin login --account <account_name>
 sau douyin login --account <account_name> --headless
 sau douyin check --account <account_name>
-sau douyin upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tags 运动,训练
-sau douyin upload-note --account <account_name> --images videos/1.png videos/2.png --title "图文标题" --note "图文示例" --tags 图文,测试
+sau douyin upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tags sports,training
+sau douyin upload-note --account <account_name> --images videos/1.png videos/2.png --title "Image post title" --note "Image post example" --tags image-post,test
 ```
 
-抖音短信验证码补充说明：
+Notes on the Douyin SMS verification code:
 
-- 视频发布过程中如果触发短信二次验证，CLI 会优先读取项目根目录下的 `verify_code.txt`
-- 如果未找到 `verify_code.txt`，并且当前命令是在交互式终端中手动运行，CLI 会直接在终端提示输入验证码
-- 对 agent、自动任务、远程桥接这类场景，仍然可以继续用写入 `verify_code.txt` 的方式喂验证码
-- 验证通过后，程序会自动清理 `verify_code.txt`
+- If SMS two-step verification is triggered while publishing a video, the CLI first reads `verify_code.txt` in the project root
+- If `verify_code.txt` is not found and the command is being run by hand in an interactive terminal, the CLI prompts for the code directly in the terminal
+- For agents, automated tasks and remote bridges, you can still feed the code by writing `verify_code.txt`
+- After verification succeeds, the program cleans up `verify_code.txt` automatically
 
-## 快手 CLI 子命令
+## Kuaishou CLI subcommands
 
 ```bash
 sau kuaishou login --account <account_name>
 sau kuaishou check --account <account_name>
-sau kuaishou upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tags 运动,训练
-sau kuaishou upload-note --account <account_name> --images videos/1.png videos/2.png videos/3.png --title "图文标题" --note "图文示例" --tags 图文,测试
+sau kuaishou upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tags sports,training
+sau kuaishou upload-note --account <account_name> --images videos/1.png videos/2.png videos/3.png --title "Image post title" --note "Image post example" --tags image-post,test
 ```
 
-## 小红书 CLI 子命令
+## Xiaohongshu CLI subcommands
 
 ```bash
 sau xiaohongshu login --account <account_name>
 sau xiaohongshu check --account <account_name>
-sau xiaohongshu upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tags 小红书,视频
-sau xiaohongshu upload-note --account <account_name> --images videos/1.png videos/2.png videos/3.png --title "图文标题" --note "图文示例" --tags 图文,测试
+sau xiaohongshu upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tags xiaohongshu,video
+sau xiaohongshu upload-note --account <account_name> --images videos/1.png videos/2.png videos/3.png --title "Image post title" --note "Image post example" --tags image-post,test
 ```
 
-海外环境如果无法登录默认创作者后台，可以通过环境变量切换到 RedNote 域名。该设置同时作用于登录、cookie 校验、视频发布和图文发布：
+If you are overseas and cannot log in to the default creator backend, you can switch to the RedNote domain with an environment variable. The setting applies to login, cookie checks, video publishing and image post publishing:
 
 ```bash
 SAU_XHS_CREATOR_BASE_URL=https://creator.rednote.com sau xiaohongshu login --account <account_name>
 ```
 
-## Bilibili CLI 子命令
+## Bilibili CLI subcommands
 
 ```bash
 sau bilibili login --account <account_name>
 sau bilibili check --account <account_name>
-sau bilibili upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tid 249 --tags 足球,测试 --thumbnail covers/demo.png
+sau bilibili upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tid 249 --tags football,test --thumbnail covers/demo.png
 ```
 
-补充说明：
+Additional notes:
 
-- `creator` 之类的名字只是示例值，真正传的是用户自定义的 `account_name`
-- 一个 `account_name` 对应一个账号文件，可以准备多个账号并发使用
-- 浏览器平台统一元数据约定：
-- 视频使用 `title + desc + tags`
-- 抖音、快手、小红书的图片笔记使用 `title + note + tags`
-- 大鱼号文章使用 `title + content-file + source`，正文从 UTF-8 文件读取
-- `sau bilibili ...` 会自动准备 `biliup`
-- 如果本地没有 `biliup`，第一次运行会自动下载
-- 如果上游 GitHub Release 有更新，运行时会先自动更新
-- `sau bilibili login --account <name>` 建议由用户自己在本地真实终端里执行；如果终端里的二维码显示不完整，可直接打开当前目录下的 `qrcode.png` 扫码
+- Names such as `creator` are only example values. What you actually pass is your own `account_name`
+- One `account_name` maps to one account file. You can prepare several accounts and use them concurrently
+- Shared metadata convention for the browser platforms:
+- Videos use `title + desc + tags`
+- Image notes on Douyin, Kuaishou and Xiaohongshu use `title + note + tags`
+- Dayu articles use `title + content-file + source`, and the body is read from a UTF-8 file
+- `sau bilibili ...` prepares `biliup` automatically
+- If `biliup` is not present locally, it is downloaded automatically the first time
+- If the upstream GitHub Release has an update, it is updated automatically before running
+- It is best for the user to run `sau bilibili login --account <name>` in a real local terminal. If the QR code is not fully displayed in the terminal, open `qrcode.png` in the current directory and scan it
 
-## 视频号 CLI 子命令
+## WeChat Channels CLI subcommands
 
 ```bash
 sau tencent login --account <account_name>
 sau tencent check --account <account_name>
-sau tencent upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tags 视频号,测试
+sau tencent upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tags channels,test
 ```
 
-视频号支持定时发布、草稿、合集和双比例封面：
+WeChat Channels supports scheduled publishing, drafts, collections and covers in two aspect ratios:
 
 ```bash
-sau tencent upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --schedule "2026-03-24 21:30" --thumbnail-landscape covers/landscape.png --thumbnail-portrait covers/portrait.png --collection "我的合集"
-sau tencent upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --draft
+sau tencent upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --schedule "2026-03-24 21:30" --thumbnail-landscape covers/landscape.png --thumbnail-portrait covers/portrait.png --collection "My collection"
+sau tencent upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --draft
 ```
 
-视频号登录和上传依赖浏览器中的登录态。无头模式下如果需要扫码，CLI 会生成临时二维码；需要人工查看页面时可以加 `--headed`。
+WeChat Channels login and upload depend on the login state in the browser. In headless mode, if a QR-code scan is needed, the CLI generates a temporary QR code. When you need to look at the page by hand, add `--headed`.
 
-## 百家号 CLI 子命令
+## Baijiahao CLI subcommands
 
 ```bash
 sau baijiahao login --account <account_name>
 sau baijiahao check --account <account_name>
-sau baijiahao upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tags 百家号,测试
+sau baijiahao upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tags baijiahao,test
 ```
 
-百家号当前支持登录、账号检查和视频上传；支持 `--thumbnail` 与 `--collection`，暂不支持 `--schedule`。上传前需要先完成百度账号登录并保存账号文件。
+Baijiahao currently supports login, account check and video upload. It supports `--thumbnail` and `--collection`, and does not support `--schedule` yet. Before uploading, you must log in to the Baidu account and save the account file.
 
-## 支付宝生活号 CLI 子命令
+## Alipay Life Account CLI subcommands
 
 ```bash
 sau alipay login --account <account_name>
 sau alipay check --account <account_name>
-sau alipay upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tags 生活号,测试
+sau alipay upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tags life-account,test
 ```
 
-支付宝生活号当前支持登录、账号检查和视频上传；支持 `--thumbnail` 与 `--collection`，暂不支持图文上传和 `--schedule`。首次使用前需要在支付宝内容创作后台完成登录，并确认账号已开通生活号内容创作权限。
+Alipay Life Account (支付宝生活号) currently supports login, account check and video upload. It supports `--thumbnail` and `--collection`, and does not support image post upload or `--schedule` yet. Before first use, log in to the Alipay content creation backend and confirm that the account has Life Account content creation permission.
 
-## YouTube CLI 子命令
+## YouTube CLI subcommands
 
 ```bash
 sau youtube login --account <account_name>
 sau youtube check --account <account_name>
-sau youtube upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tags tag1,tag2 --playlist "我的系列" --visibility public
-sau youtube upload-video --account <account_name> --file videos/demo.mp4 --title "定时视频" --schedule "2026-10-21 10:30"
+sau youtube upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tags tag1,tag2 --playlist "My series" --visibility public
+sau youtube upload-video --account <account_name> --file videos/demo.mp4 --title "Scheduled video" --schedule "2026-10-21 10:30"
 ```
 
-YouTube 登录需要在浏览器中完成 Google 账号登录，不使用二维码。`--visibility` 可选 `public`、`unlisted` 或 `private`，`--playlist` 可选；传 `--schedule` 时使用 YouTube Studio 的 Schedule 状态并核对日期/时间控件，不传则立即按 `--visibility` 发布。
+YouTube login needs a Google account login in the browser and does not use a QR code. `--visibility` accepts `public`, `unlisted` or `private`, and `--playlist` is optional. With `--schedule`, the YouTube Studio Schedule state is used and the date/time controls are checked. Without it, the video is published immediately according to `--visibility`.
 
-## Facebook CLI 子命令
+## Facebook CLI subcommands
 
-个人主页使用 `facebook`，Page 使用 `facebook-page`。默认不配置代理，浏览器按系统网络直连。需要代理时可在命令中传 `--proxy "代理地址"`，或设置 `SAU_FACEBOOK_PROXY`、`SAU_FACEBOOK_PAGE_PROXY`；传 `--proxy ""` 可忽略环境变量并直连。账号文件分别保存，首次使用先登录对应入口。
+Use `facebook` for a personal profile and `facebook-page` for a Page. No proxy is configured by default, and the browser connects directly through the system network. When you need a proxy, pass `--proxy "proxy address"` in the command, or set `SAU_FACEBOOK_PROXY` or `SAU_FACEBOOK_PAGE_PROXY`. Pass `--proxy ""` to ignore the environment variables and connect directly. Account files are saved separately. Log in to the matching entry first on first use.
 
 ```powershell
 sau facebook login --account creator
 sau facebook check --account creator
-sau facebook upload-video --account creator --file videos/demo.mp4 --title "视频标题" --desc "正文"
-sau facebook upload-note --account creator --images images/1.jpg --title "图文标题" --note "正文"
+sau facebook upload-video --account creator --file videos/demo.mp4 --title "Video title" --desc "Body text"
+sau facebook upload-note --account creator --images images/1.jpg --title "Image post title" --note "Body text"
 sau facebook-page login --account creator
-sau facebook-page upload-note --account creator --page "我的 Page" --images images/1.jpg --title "图文标题" --note "正文" --schedule "2026-10-21 10:30" --result .local/page-result.json
-sau facebook-page upload-video --account creator --page "我的 Page" --file videos/demo.mp4 --title "视频标题" --desc "正文" --schedule "2026-10-21 10:30" --result .local/reel-result.json
+sau facebook-page upload-note --account creator --page "My Page" --images images/1.jpg --title "Image post title" --note "Body text" --schedule "2026-10-21 10:30" --result .local/page-result.json
+sau facebook-page upload-video --account creator --page "My Page" --file videos/demo.mp4 --title "Video title" --desc "Body text" --schedule "2026-10-21 10:30" --result .local/reel-result.json
 ```
 
-个人主页支持视频、图片及正文立即发布，目前未接入个人主页定时。Page 视频和图文支持 `--schedule "YYYY-MM-DD HH:MM"`，使用北京时间，要求至少提前 2 小时；不传即立即提交。当前实现核对 `Asia/Shanghai` 浏览器时区、页面日期/时间及原作品列表安排。`--page` 应填写准确 Page 名称。
+A personal profile supports immediate publishing of videos, images and body text. Scheduling for personal profiles is not connected yet. Page videos and image posts support `--schedule "YYYY-MM-DD HH:MM"` in Beijing time, and it must be at least 2 hours ahead. Without it, the post is submitted immediately. The current implementation checks the `Asia/Shanghai` browser time zone, the page date/time, and the schedule in the original work list. `--page` should be the exact Page name.
 
-Page 发布结果默认保存在 `.local/meta-results/`，也可用 `--result` 指定 JSON 文件。结果包含 `page_id`、`page_name`、`content_id`（视频处理中可能暂时没有）和状态。`scheduled` 表示平台已确认排期并核对原记录；`published` 表示图文已发布并核对原记录；立即发布视频在创建响应无错误且完成弹窗出现后返回 `processing`，表示平台已受理并正在处理，不能当成已经公开播放，后续作品编号由平台生成时再查询。`submission_unknown` 仅表示提交响应或完成证据没有确认，必须先查原记录，禁止直接重发。
+Page publish results are saved in `.local/meta-results/` by default. You can also specify a JSON file with `--result`. The result contains `page_id`, `page_name`, `content_id` (which may not exist yet while a video is processing) and the status. `scheduled` means the platform confirmed the schedule and the original record was checked. `published` means the image post is published and the original record was checked. For an immediately published video, `processing` is returned when the creation response has no error and the completion dialog appears. It means the platform has accepted it and is processing it. Do not treat it as already publicly playable. Look up the work ID later, once the platform has generated it. `submission_unknown` only means the submission response or the completion evidence was not confirmed. You must check the original record first and must not resend directly.
 
-### 查询与删除
+### Lookup and deletion
 
 ```powershell
-sau facebook verify --account creator --post-url "https://www.facebook.com/reel/作品编号/" --owner-id "作者数字ID" --expected-text "原作品正文"
-sau facebook delete --account creator --post-url "原作品链接" --owner-id "作者数字ID" --expected-text "原作品正文"
-sau facebook delete --account creator --post-url "原作品链接" --owner-id "作者数字ID" --expected-text "原作品正文" --from-trash --permanent
-sau facebook-page verify --account creator --page "我的 Page" --page-id "Page数字ID" --content-id "内容编号" --expected-text "原作品正文" --scheduled
-sau facebook-page delete --account creator --page "我的 Page" --page-id "Page数字ID" --content-id "内容编号" --expected-text "原作品正文" --scheduled --result .local/delete-result.json
+sau facebook verify --account creator --post-url "https://www.facebook.com/reel/<work ID>/" --owner-id "<numeric author ID>" --expected-text "<original work body text>"
+sau facebook delete --account creator --post-url "<original work link>" --owner-id "<numeric author ID>" --expected-text "<original work body text>"
+sau facebook delete --account creator --post-url "<original work link>" --owner-id "<numeric author ID>" --expected-text "<original work body text>" --from-trash --permanent
+sau facebook-page verify --account creator --page "My Page" --page-id "<numeric Page ID>" --content-id "<content ID>" --expected-text "<original work body text>" --scheduled
+sau facebook-page delete --account creator --page "My Page" --page-id "<numeric Page ID>" --content-id "<content ID>" --expected-text "<original work body text>" --scheduled --result .local/delete-result.json
 ```
 
-个人主页删除默认移至垃圾箱；加 `--permanent` 可永久删除，已经在垃圾箱中的作品再加 `--from-trash`。查询垃圾箱同样使用 `verify --from-trash`。`verify --deleted` 仅查询原编号是否已不在垃圾箱，返回 `absent_from_trash`，不凭“没找到”证明曾经永久删除。
+Deleting from a personal profile moves the work to the trash by default. Add `--permanent` to delete it permanently. For a work that is already in the trash, also add `--from-trash`. To look up the trash, also use `verify --from-trash`. `verify --deleted` only checks whether the original ID is no longer in the trash and returns `absent_from_trash`. It does not use "not found" as proof that it was once permanently deleted.
 
-Page 的 `--scheduled` 选择定时列表，删除会取消排期并永久移除。已发布作品不加该参数，当前平台执行移至垃圾箱，返回 `trashed`，30 天后由平台删除；CLI 尚未接入 Page 垃圾箱的提前永久删除。定时作品发布后编号可能变化，管理已发布作品请使用已发布列表中的编号。
+A Page's `--scheduled` selects the scheduled list. Deleting there cancels the schedule and removes the post permanently. Without this option for a published work, the platform currently moves it to the trash and returns `trashed`. The platform deletes it after 30 days. The CLI does not yet support permanently deleting from the Page trash early. The ID of a scheduled work may change after it is published. To manage a published work, use the ID in the published list.
 
-所有删除动作先核对作者或 Page、原作品编号和正文。正文相同且无法唯一定位时明确失败。当前查询覆盖列表已加载的近期作品，不保证自动翻页检索全部历史作品。删除之后重新查询服务器列表；若结果未知，先查询，不自动重删。删除远端作品不会删除本地素材。
+All deletion actions first check the author or Page, the original work ID and the body text. If the body text is identical and the work cannot be located uniquely, it fails with a clear error. The current lookup covers recent works already loaded in the list. It does not page through all historical works automatically. After a deletion, the server list is queried again. If the result is unknown, query first and do not delete again automatically. Deleting a remote work does not delete the local material.
 
-## Instagram 独立网页发布
+## Instagram standalone web publishing
 
-Instagram 使用工程的 Patchright Chrome，不依赖 Facebook Page 或 Business Suite 绑定。默认可见浏览器，未配置代理时按系统网络直连；需要代理时可使用 `--proxy` 或 `SAU_INSTAGRAM_PROXY`。传 `--proxy ""` 可忽略环境变量并直连。首次使用先安装依赖和 Chrome，按本文的项目环境准备步骤执行。
+Instagram uses the project's Patchright Chrome and does not depend on a Facebook Page or a Business Suite binding. The browser is visible by default. When no proxy is configured, it connects directly through the system network. When you need a proxy, use `--proxy` or `SAU_INSTAGRAM_PROXY`. Pass `--proxy ""` to ignore the environment variables and connect directly. On first use, install the dependencies and Chrome first, following the project environment steps in this document.
 
 ```powershell
 sau instagram login --account creator
 sau instagram check --account creator
-sau instagram upload-video --account creator --file videos/demo.mp4 --thumbnail covers/demo.png --title "视频标题" --desc "正文" --tags 生活,分享 --result .local/instagram-video.json
-sau instagram upload-note --account creator --images images/1.jpg --title "单图标题" --note "正文"
-sau instagram upload-note --account creator --images images/1.jpg images/2.jpg --title "轮播标题" --note "正文" --result .local/instagram-carousel.json
+sau instagram upload-video --account creator --file videos/demo.mp4 --thumbnail covers/demo.png --title "Video title" --desc "Body text" --tags life,sharing --result .local/instagram-video.json
+sau instagram upload-note --account creator --images images/1.jpg --title "Single image title" --note "Body text"
+sau instagram upload-note --account creator --images images/1.jpg images/2.jpg --title "Carousel title" --note "Body text" --result .local/instagram-carousel.json
 ```
 
-视频/Reel 可用 `--thumbnail` 指定 JPG/JPEG/PNG 封面；省略时使用 Instagram 默认封面。指定图片后会检查主预览确实使用该图片，失败则停止提交。封面按当前视频画幅居中裁剪，图片边缘的重要文字应留出安全区域。图文发布不接受此参数。
+For a video/Reel, `--thumbnail` can set a JPG/JPEG/PNG cover. When omitted, Instagram's default cover is used. After an image is specified, the main preview is checked to confirm that it really uses that image, and submission stops if not. The cover is center-cropped to the current video frame, so leave a safe margin for important text near the image edges. Image post publishing does not accept this option.
 
-`login` 在工程浏览器中等待人工登录和必要验证，将状态保存为 `cookies/instagram_creator.json`，并通过新会话验证。`check` 检查该账号的登录状态和用户绑定，不能代替发布权限检查；网络或未知页面超时会报告错误，不会直接视为 Cookie 失效。
+`login` waits in the project browser for manual login and any required verification, saves the state to `cookies/instagram_creator.json`, and verifies it in a new session. `check` checks the login state and user binding of that account. It cannot replace a check of publishing permission. A network error or an unknown-page timeout is reported as an error and is not treated directly as an expired cookie.
 
-视频输入为 MP4/MOV；照片为 JPG/JPEG/PNG/AVIF/HEIC/HEIF，实际解码与处理受平台限制。多个图片路径按传入顺序创建轮播；当前已实测单张照片及两张不同照片。标题、正文、标签合并为配文，合计最多 2200 字符。`--headless` 可切换无头运行，人工登录使用默认可见模式。
+Video input is MP4/MOV. Photos are JPG/JPEG/PNG/AVIF/HEIC/HEIF, and actual decoding and processing are limited by the platform. Several image paths create a carousel in the order passed. A single photo and two different photos have been tested so far. The title, body and tags are merged into the caption, with a total of at most 2200 characters. `--headless` switches to headless running. Manual login uses the default visible mode.
 
-当前账号的照片/Reels 发布页及高级设置中没有定时入口，因此此独立网页实现只支持立即发布，不提供 `--schedule`；这不代表所有 Instagram 账号和客户端都没有定时能力。页面还提供地点、协作者、AI 标签、隐藏点赞/播放数、关闭评论，照片提供替代文字与滤镜，视频提供裁剪和声音；上述选填功能当前未接入 CLI，保留页面默认设置。首次通知提示会自动选择稍后，视频上传时的 Reels 介绍会自动确认；没有提示则继续。登录、验证仍由用户在工程浏览器完成，未知弹窗或操作失败会明确报错。
+The photo/Reels publishing page and its advanced settings for the current account have no scheduling entry. So this standalone web implementation only supports immediate publishing and has no `--schedule`. This does not mean that all Instagram accounts and clients lack scheduling. The page also offers location, collaborators, AI label, hiding like/view counts and turning off comments. Photos get alt text and filters, and videos get trimming and sound. These optional features are not connected to the CLI yet, and the page defaults are kept. The first notification prompt is dismissed with "later" automatically, and the Reels introduction shown during video upload is confirmed automatically. If there is no prompt, it continues. Login and verification are still completed by the user in the project browser. Unknown popups or failed actions are reported with a clear error.
 
-成功返回 `published`、`content_id`、`post_id`、`post_url` 和 `media_count`。Reels 可能先处于 `processing`，程序会等待本次提交的最终创建结果；超时后保留已观察状态。`submission_unknown` 表示已进入提交但未确认平台结果，`processing` 表示平台已受理且尚未取得最终作品，均不可直接重复上传。默认结果保存在 `.local/instagram-results/`；建议用 `--result` 指定路径。
+On success it returns `published`, `content_id`, `post_id`, `post_url` and `media_count`. A Reel may first be in `processing`, and the program waits for the final creation result of this submission. After a timeout, the state already observed is kept. `submission_unknown` means the submission was entered but the platform result was not confirmed. `processing` means the platform has accepted it but the final work is not yet available. In neither case should you upload again directly. The default results are saved in `.local/instagram-results/`. Specifying a path with `--result` is recommended.
 
-如果已取得原作品链接：
+If you already have the original work link:
 
 ```powershell
-sau instagram verify --account creator --post-url "https://www.instagram.com/p/作品编号/" --expected-text "原作品中的准确文字" --result .local/instagram-verify.json
-sau instagram delete --account creator --post-url "https://www.instagram.com/reel/作品编号/" --expected-text "原作品中的准确文字" --result .local/instagram-delete.json
+sau instagram verify --account creator --post-url "https://www.instagram.com/p/<work ID>/" --expected-text "<exact text from the original work>" --result .local/instagram-verify.json
+sau instagram delete --account creator --post-url "https://www.instagram.com/reel/<work ID>/" --expected-text "<exact text from the original work>" --result .local/instagram-delete.json
 ```
 
-接受 `/p/编号/`、`/reel/编号/` 以及带作者名的原作品链接。操作前核对账号绑定、作者、作品编号和正文，拒绝删除其他作者的作品。`delete` 将作品移至 Instagram 的“最近删除”，最终返回 `deleted`；不实现批量删除或提前永久清空。“最近删除”的保留规则由平台决定，本地素材不会被删除。
+It accepts `/p/<ID>/`, `/reel/<ID>/` and original work links that include the author name. Before acting, it checks the account binding, the author, the work ID and the body text, and refuses to delete another author's work. `delete` moves the work to Instagram's 最近删除 (Recently Deleted) and finally returns `deleted`. Batch deletion and early permanent clearing are not implemented. The retention rules of 最近删除 (Recently Deleted) are decided by the platform. Local material is not deleted.
 
-结果未知且没有链接时，先在同一账号主页按配文、素材和发布时间查找原作品，复制原作品链接再运行 `verify`；找不到不能证明提交失败，也不要直接重发。删除出现 `deletion_unknown` 时同样先查原作品和“最近删除”，不要重复删除。失败结果会包含阶段/错误和本地证据目录；账号状态、截图及页面记录均放在 Git 忽略目录，不应提交到仓库。
+When the result is unknown and there is no link, first look for the original work on the same account's profile by caption, material and publish time. Copy the original work link and then run `verify`. Not finding it does not prove the submission failed, and do not resend directly. When a deletion shows `deletion_unknown`, likewise check the original work and 最近删除 (Recently Deleted) first, and do not delete again. A failed result includes the stage/error and the local evidence directory. Account state, screenshots and page records are all in directories ignored by Git and should not be committed to the repository.
 
-## 微博 CLI 子命令
+## Weibo CLI subcommands
 
 ```bash
 sau weibo login --account <account_name>
 sau weibo check --account <account_name>
-sau weibo upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tags 微博,测试 --thumbnail covers/demo.png
+sau weibo upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tags weibo,test --thumbnail covers/demo.png
 ```
 
-微博当前支持登录、账号检查和视频上传；标题最多 30 个字，封面图建议小于 5 MB，暂不支持图文上传和 `--schedule`。
+Weibo currently supports login, account check and video upload. The title is at most 30 characters, and the cover image should be under 5 MB. Image post upload and `--schedule` are not supported yet.
 
-## 虎扑 CLI 子命令
+## Hupu CLI subcommands
 
 ```bash
 sau hupu login --account <account_name>
 sau hupu check --account <account_name>
-sau hupu upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tags 虎扑,测试 --thumbnail covers/demo.png
+sau hupu upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tags hupu,test --thumbnail covers/demo.png
 ```
 
-虎扑当前支持登录、账号检查和视频上传；标题长度要求为 4–40 个字，暂不支持图文上传和 `--schedule`。虎扑登录可能需要在浏览器中完成 QQ 或手机号登录，需要人工查看页面时可以加 `--headed`。
+Hupu currently supports login, account check and video upload. The title must be 4–40 characters. Image post upload and `--schedule` are not supported yet. Hupu login may require a QQ or phone-number login in the browser. When you need to look at the page by hand, add `--headed`.
 
-## 登录二维码说明
+## Login QR codes
 
-- 抖音、快手、小红书、视频号、百家号、支付宝生活号、微博和虎扑登录过程中，CLI / uploader 可能会生成临时二维码图片
-- 对普通用户来说，可以直接打开该图片扫码
-- 对可操作本地文件的 agent 来说，不要只把图片路径告诉用户
-- 这类二维码图片本身就是给用户扫码的，agent 应优先直接展示/发送本地图片给用户
-- Bilibili 和 YouTube 当前不走这套本地二维码图片托管链路，登录按上面的平台说明处理即可
+- During login on Douyin, Kuaishou, Xiaohongshu, WeChat Channels, Baijiahao, Alipay Life Account, Weibo and Hupu, the CLI / uploader may generate a temporary QR code image
+- An ordinary user can open that image directly and scan it
+- For an agent that can work with local files, do not just tell the user the image path
+- The QR code image is meant to be scanned by the user. The agent should show or send the local image to the user directly
+- Bilibili and YouTube currently do not use this local QR-code image hosting flow. Handle their login as described in the platform sections above
 
-## 定时发布
+## Scheduled publishing
 
-抖音、快手、小红书、视频号的图文或视频上传、Bilibili 的视频上传，以及大鱼号的视频和文章上传支持 `--schedule`。只要传了 `--schedule`，CLI 就会自动切换到对应平台的定时发布策略；不传则默认立即发布。大鱼号时间固定为北京时间，范围为 2 小时后至 7 天内、5 分钟一档。百家号、支付宝生活号、微博和虎扑当前不支持 `--schedule`。
+`--schedule` is supported for image post or video upload on Douyin, Kuaishou, Xiaohongshu and WeChat Channels, for video upload on Bilibili, and for video and article upload on Dayu. Whenever `--schedule` is passed, the CLI automatically switches to that platform's scheduled publishing strategy. Without it, the default is to publish immediately. Dayu time is always Beijing time, between 2 hours and 7 days ahead, in 5-minute steps. Baijiahao, Alipay Life Account, Weibo and Hupu do not support `--schedule` for now.
 
 ```bash
-sau douyin upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --schedule "2026-03-24 21:30"
-sau douyin upload-note --account <account_name> --images videos/1.png videos/2.png --title "图文标题" --note "图文示例" --schedule "2026-03-24 21:30"
-sau kuaishou upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --schedule "2026-03-24 21:30"
-sau kuaishou upload-note --account <account_name> --images videos/1.png videos/2.png videos/3.png --title "图文标题" --note "图文示例" --schedule "2026-03-24 21:30"
-sau xiaohongshu upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --schedule "2026-03-24 21:30"
-sau xiaohongshu upload-note --account <account_name> --images videos/1.png videos/2.png videos/3.png --title "图文标题" --note "图文示例" --schedule "2026-03-24 21:30"
-sau bilibili upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tid 249 --schedule "2026-03-24 21:30"
-sau tencent upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --schedule "2026-03-24 21:30"
+sau douyin upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --schedule "2026-03-24 21:30"
+sau douyin upload-note --account <account_name> --images videos/1.png videos/2.png --title "Image post title" --note "Image post example" --schedule "2026-03-24 21:30"
+sau kuaishou upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --schedule "2026-03-24 21:30"
+sau kuaishou upload-note --account <account_name> --images videos/1.png videos/2.png videos/3.png --title "Image post title" --note "Image post example" --schedule "2026-03-24 21:30"
+sau xiaohongshu upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --schedule "2026-03-24 21:30"
+sau xiaohongshu upload-note --account <account_name> --images videos/1.png videos/2.png videos/3.png --title "Image post title" --note "Image post example" --schedule "2026-03-24 21:30"
+sau bilibili upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tid 249 --schedule "2026-03-24 21:30"
+sau tencent upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --schedule "2026-03-24 21:30"
 ```
 
-## 运行时参数
+## Runtime options
 
-CLI 将 `debug` 和 `headless` 拆成了两个独立维度：
+The CLI splits `debug` and `headless` into two independent dimensions:
 
 ```bash
 --debug
@@ -335,67 +337,67 @@ CLI 将 `debug` 和 `headless` 拆成了两个独立维度：
 --headed
 ```
 
-- `--debug`: 打开调试行为，例如失败时保留更多调试信息
-- `--headless`: 无头模式运行
-- `--headed`: 有头模式运行
+- `--debug`: turns on debug behavior, for example keeping more debug information on failure
+- `--headless`: run in headless mode
+- `--headed`: run in headed mode
 
-如果都不传，CLI 当前默认按 `headless=True` 运行。
+If none is passed, the CLI currently runs with `headless=True` by default.
 
-补充：
+Also:
 
-- 抖音和快手的 CLI 默认都是无头模式
-- 如果用户明确要求可见浏览器窗口，或确实需要人工看页面，再显式传 `--headed`
+- The Douyin and Kuaishou CLIs are both headless by default
+- Only pass `--headed` explicitly if the user clearly asks for a visible browser window, or you really need to look at the page by hand
 
-## 视频上传参数
+## Video upload options
 
 ```bash
 --file videos/demo.mp4
---title "示例标题"
---desc "示例简介"
---tags 运动,训练
+--title "Sample title"
+--desc "Sample description"
+--tags sports,training
 --thumbnail videos/demo.png
 --thumbnail-landscape videos/cover-4x3.png
 --thumbnail-portrait videos/cover-3x4.png
 ```
 
-抖音和视频号支持同时设置两种比例的封面图：
+Douyin and WeChat Channels support setting covers in two aspect ratios at the same time:
 
-- `--thumbnail-landscape`: 4:3 横版封面
-- `--thumbnail-portrait`: 3:4 竖版封面
-- `--thumbnail`: 兼容旧参数，等同于 3:4 竖版封面
+- `--thumbnail-landscape`: 4:3 landscape cover
+- `--thumbnail-portrait`: 3:4 portrait cover
+- `--thumbnail`: legacy option kept for compatibility, equivalent to the 3:4 portrait cover
 
-视频号、百家号和支付宝生活号支持使用 `--collection` 指定已有合集；百家号和支付宝生活号还支持 `--thumbnail` 指定封面图。
+WeChat Channels, Baijiahao and Alipay Life Account support `--collection` to pick an existing collection. Baijiahao and Alipay Life Account also support `--thumbnail` to set the cover image.
 
-抖音额外支持：
+Douyin additionally supports:
 
 ```bash
 --product-link https://example.com/item
---product-title 示例商品
+--product-title "Sample product"
 ```
 
-Bilibili 额外要求：
+Bilibili has an additional requirement:
 
 ```bash
 --tid 249
 ```
 
-- `--tid` 第一版是必填
-- `--tags` 会映射到 `biliup upload --tag`
-- `--schedule` 会映射到 Bilibili 所需的时间戳参数
+- `--tid` is required in the first version
+- `--tags` is mapped to `biliup upload --tag`
+- `--schedule` is mapped to the timestamp option that Bilibili requires
 
-## 图片笔记上传参数
+## Image note upload options
 
 ```bash
 --images videos/1.png videos/2.png videos/3.png
---title "图文标题"
---note "图文内容"
---tags 图文,测试
+--title "Image post title"
+--note "Image post content"
+--tags image-post,test
 ```
 
-图片笔记上传当前限制：
+Current limits for image note upload:
 
-- 抖音：最多 35 张图片，不支持 GIF
-- 快手：支持多张图片，建议传真实不同文件，不要把同一路径重复多次
-- 小红书：支持多张图片，正文 `--note` 可选，但 `--title` 建议始终显式传入
+- Douyin: at most 35 images, GIF is not supported
+- Kuaishou: multiple images are supported. Pass really different files and do not repeat the same path several times
+- Xiaohongshu: multiple images are supported. The body `--note` is optional, but it is best to always pass `--title` explicitly
 
-大鱼号文章使用 `--content-file` 提供 HTML、Markdown 或 TXT 正文文件，支持本地图片和图文混排，正文最多 2 万字；来源与封面等参数见 [大鱼号图文发布](./dayu-article.md)。
+Dayu articles use `--content-file` to provide an HTML, Markdown or TXT body file. Local images and mixed text and images are supported, with a body of at most 20,000 characters. For source, cover and other options, see [Dayu image post publishing](./dayu-article.md).

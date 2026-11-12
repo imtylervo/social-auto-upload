@@ -1,8 +1,8 @@
-# 故障排查
+# Troubleshooting
 
-## 找不到 `sau` 命令
+## `sau` command not found
 
-可以尝试以下方式：
+Try the following:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
@@ -17,62 +17,62 @@ sau xiaohongshu --help
 uv run sau xiaohongshu --help
 ```
 
-如果当前环境还没有安装项目：
+If the project is not installed in the current environment yet:
 
 ```bash
 uv pip install -e .
 ```
 
-## cookie 无效或已过期
+## Cookie invalid or expired
 
-先检查 cookie 状态：
+Check the cookie state first:
 
 ```bash
 sau xiaohongshu check --account <account>
 ```
 
-如果无效，就重新登录：
+If it is invalid, log in again:
 
 ```bash
 sau xiaohongshu login --account <account>
 ```
 
-## 无头登录二维码处理
+## Handling the QR code in headless login
 
-如果用户无法使用终端二维码输出：
+If the user cannot use the terminal QR code output:
 
-- 查找 CLI 打印出来的临时二维码图片
-- agent 不要只把图片路径回给用户
-- agent 应优先直接把本地二维码图片展示/发送给用户扫码
+- Find the temporary QR code image printed by the CLI
+- The agent should not just reply with the image path
+- The agent should show or send the local QR code image to the user to scan
 
-如果终端二维码显示不正常，优先使用保存下来的图片路径，而不是反复尝试随机的终端设置。
+If the terminal QR code does not display correctly, use the saved image path instead of repeatedly trying random terminal settings.
 
-## 上传参数缺失
+## Missing upload arguments
 
-### 视频上传
+### Video upload
 
-最少需要：
+At minimum:
 
 - `--account`
 - `--file`
 - `--title`
 
-### 图文上传
+### Image post upload
 
-最少需要：
+At minimum:
 
 - `--account`
 - `--images`
 - `--title`
 
-`--note` 当前是可选图文正文。
+`--note` is currently the optional image post body.
 
-## 定时发布
+## Scheduled publishing
 
-时间格式使用：
+Use this time format:
 
 ```text
 YYYY-MM-DD HH:MM
 ```
 
-如果不需要定时发布，去掉 `--schedule` 即可改为立即发布。
+If you do not need scheduled publishing, remove `--schedule` to publish immediately.

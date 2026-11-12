@@ -5,7 +5,7 @@
         <div class="sidebar">
           <div class="logo">
             <img v-show="isCollapse" src="/vite.svg" alt="Logo" class="logo-img">
-            <h2 v-show="!isCollapse">自媒体自动化运营系统</h2>
+            <h2 v-show="!isCollapse">Social Media Automation System</h2>
           </div>
           <el-menu
             :router="true"
@@ -18,23 +18,23 @@
           >
             <el-menu-item index="/">
               <el-icon><HomeFilled /></el-icon>
-              <span>首页</span>
+              <span>Home</span>
             </el-menu-item>
             <el-menu-item index="/account-management">
               <el-icon><User /></el-icon>
-              <span>账号管理</span>
+              <span>Account Management</span>
             </el-menu-item>
             <el-menu-item index="/material-management">
               <el-icon><Picture /></el-icon>
-              <span>素材管理</span>
+              <span>Material Management</span>
             </el-menu-item>
             <el-menu-item index="/publish-center">
               <el-icon><Upload /></el-icon>
-              <span>发布中心</span>
+              <span>Publish Center</span>
             </el-menu-item>
             <el-menu-item index="/about">
               <el-icon><DataAnalysis /></el-icon>
-              <span>关于</span>
+              <span>About</span>
             </el-menu-item>
           </el-menu>
         </div>
@@ -46,7 +46,7 @@
               <el-icon class="toggle-sidebar" @click="toggleSidebar"><Fold /></el-icon>
             </div>
             <div class="header-right">
-              <!-- 账号信息已移除 -->
+              <!-- Account info removed -->
             </div>
           </div>
         </el-header>
@@ -68,15 +68,15 @@ import {
 
 const route = useRoute()
 
-// 当前激活的菜单项
+// Currently active menu item
 const activeMenu = computed(() => {
   return route.path
 })
 
-// 侧边栏折叠状态
+// Sidebar collapsed state
 const isCollapse = ref(false)
 
-// 切换侧边栏折叠状态
+// Toggle the sidebar collapsed state
 const toggleSidebar = () => {
   isCollapse.value = !isCollapse.value
 }

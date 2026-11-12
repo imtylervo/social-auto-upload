@@ -2,10 +2,10 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useAccountStore = defineStore('account', () => {
-  // 存储所有账号信息
+  // All account info
   const accounts = ref([])
   
-  // 平台类型映射
+  // Platform type map (the Chinese names are compared in the views, keep them)
   const platformTypes = {
     1: '小红书',
     2: '视频号',
@@ -13,9 +13,9 @@ export const useAccountStore = defineStore('account', () => {
     4: '快手'
   }
   
-  // 设置账号列表
+  // Set the account list
   const setAccounts = (accountsData) => {
-    // 转换后端返回的数据格式为前端使用的格式
+    // Convert the backend data format to the one the frontend uses
     accounts.value = accountsData.map(item => {
       return {
         id: item[0],
@@ -28,12 +28,12 @@ export const useAccountStore = defineStore('account', () => {
     })
   }
   
-  // 添加账号
+  // Add an account
   const addAccount = (account) => {
     accounts.value.push(account)
   }
   
-  // 更新账号
+  // Update an account
   const updateAccount = (id, updatedAccount) => {
     const index = accounts.value.findIndex(acc => acc.id === id)
     if (index !== -1) {
@@ -41,12 +41,12 @@ export const useAccountStore = defineStore('account', () => {
     }
   }
   
-  // 删除账号
+  // Delete an account
   const deleteAccount = (id) => {
     accounts.value = accounts.value.filter(acc => acc.id !== id)
   }
   
-  // 根据平台获取账号
+  // Get the accounts of a platform
   const getAccountsByPlatform = (platform) => {
     return accounts.value.filter(acc => acc.platform === platform)
   }

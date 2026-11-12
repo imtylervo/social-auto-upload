@@ -1,16 +1,16 @@
 ---
 name: alipay-upload
-description: 使用 social-auto-upload 的 `sau alipay` 登录支付宝生活号并发布视频。Use when 用户要向支付宝生活号发布视频或检查创作账号状态。
+description: Use social-auto-upload's `sau alipay` to log in to an Alipay Life Account and publish videos. Use when the user wants to publish a video to an Alipay Life Account or check the creator account state.
 license: MIT-0
 slug: social-auto-upload-alipay-upload
-displayName: 支付宝生活号视频发布
+displayName: Alipay Life Account video publishing
 version: 1.0.0
-summary: 登录支付宝生活号并发布视频，支持封面与合集。
+summary: Log in to an Alipay Life Account and publish videos, with cover and collection support.
 ---
 
-# 支付宝生活号视频发布
+# Alipay Life Account video publishing
 
-调用现有 `sau alipay` CLI。首次使用前，用户需要在支付宝内容创作后台登录并确认账号已开通生活号内容创作权限。
+Call the existing `sau alipay` CLI. Before first use, the user needs to log in to the Alipay content creation backend and confirm that the account has been granted Life Account content creation permission.
 
 ```powershell
 sau alipay login --account creator
@@ -18,6 +18,6 @@ sau alipay check --account creator
 sau alipay upload-video --account creator --file videos/demo.mp4 --title "标题" --desc "简介" --tags 生活号,测试
 ```
 
-当前仅支持视频，不支持图文和定时发布。可选 `--thumbnail` 指定封面，`--collection` 指定已有合集。账号名是本地会话别名；登录需要扫码时，把二维码图片展示给用户。
+Only videos are supported for now; image posts and scheduled publishing are not. Optional `--thumbnail` sets the cover and `--collection` sets an existing collection. The account name is a local session alias; when login needs a QR scan, show the QR code image to the user.
 
-发布前核对账号、素材、标题、简介和标签。不要把 CLI 返回“已提交”扩大解释成审核通过或公开可见；结果不确定时先查支付宝后台，不盲目重试。
+Before publishing, check the account, materials, title, description and tags. Do not over-read a CLI result of "submitted" as approved or publicly visible. If the result is uncertain, check the Alipay backend first and do not retry blindly.

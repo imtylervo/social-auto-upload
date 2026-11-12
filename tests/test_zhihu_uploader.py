@@ -1,4 +1,4 @@
-"""知乎的原稿完整性与命令契约；本地页面不冒充知乎实际上传验收。"""
+"""Zhihu: draft integrity and the command contract; a local page does not stand in for acceptance of a real Zhihu upload."""
 import asyncio
 import contextlib
 import io
@@ -24,7 +24,7 @@ class ZhihuCLITests(unittest.TestCase):
                 with self.subTest(size=size):
                     video.write_bytes(b"\0" * size)
                     app = ZhihuVideo("视频标题示例", video, "account.json", "", None, [], None, "original")
-                    with self.assertRaisesRegex(ValueError, "必须大于 100KB"):
+                    with self.assertRaisesRegex(ValueError, "must be larger than 100KB"):
                         app.validate_upload_args()
 
     def test_video_can_preview_runtime_choices_without_guessing_category(self):
@@ -87,21 +87,21 @@ class ZhihuArticleContentTests(unittest.IsolatedAsyncioTestCase):
                     page = await browser.new_page()
                     await page.set_content(original)
                     await app.check_article_body(page.locator("body"))
-                    # 真实知乎 DraftJS 使用 styled span，并在链接文字前插入零宽字符。
+                    # The real Zhihu DraftJS uses styled spans and inserts a zero-width character before link text.
                     await page.set_content(original.replace('<strong>', '<span style="font-weight: bold">')
                                            .replace('</strong>', '</span>')
                                            .replace('>链接</a>', '>\u200b链接</a>'))
                     await app.check_article_body(page.locator("body"))
-                    # 图片数量相同，但移到文末必须失败，防止再次退回统一追加图片。
+                    # Same number of images, but moved to the end of the article: must fail, so it cannot fall back to appending all images again.
                     await page.set_content('<h2>标题</h2><p>第一段<strong>重点</strong></p>'
                                            '<p>第二段<a href="https://example.com/">链接</a></p><img src="one.png">')
-                    with self.assertRaisesRegex(RuntimeError, "图片位置"):
+                    with self.assertRaisesRegex(RuntimeError, "image positions"):
                         await app.check_article_body(page.locator("body"))
                     await page.set_content(original.replace("<strong>", "<span>").replace("</strong>", "</span>"))
-                    with self.assertRaisesRegex(RuntimeError, "格式不一致"):
+                    with self.assertRaisesRegex(RuntimeError, "formatting does not match"):
                         await app.check_article_body(page.locator("body"))
                     await page.set_content(original.replace("https://example.com/", "https://example.org/"))
-                    with self.assertRaisesRegex(RuntimeError, "链接"):
+                    with self.assertRaisesRegex(RuntimeError, "link text or target"):
                         await app.check_article_body(page.locator("body"))
                 finally:
                     await browser.close()

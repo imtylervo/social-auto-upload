@@ -1,16 +1,16 @@
 ---
 name: facebook-upload
-description: 使用 sau CLI 登录 Facebook 个人主页，立即发布视频或图文，查询原作品、移至垃圾箱或永久删除。
+description: Use the sau CLI to log in to a Facebook personal profile, publish videos or image posts immediately, look up the original post, move it to the trash or delete it permanently.
 license: MIT-0
 slug: social-auto-upload-facebook-upload
-displayName: Facebook 个人主页发布
+displayName: Facebook personal profile publishing
 version: 1.0.0
-summary: 管理 Facebook 个人主页登录、视频图文发布和作品核验。
+summary: Manage Facebook personal profile login, video and image post publishing, and post verification.
 ---
 
-# Facebook 个人主页发布与删除
+# Facebook personal profile publishing and deletion
 
-本 Skill 调用现有 CLI。默认不配置代理，浏览器按系统网络直连；网络环境需要代理时显式传 `--proxy` 或设置 `SAU_FACEBOOK_PROXY`。传 `--proxy ""` 可忽略环境变量并直连。
+This Skill calls the existing CLI. No proxy is configured by default, and the browser connects directly through the system network. If your network needs a proxy, pass `--proxy` explicitly or set `SAU_FACEBOOK_PROXY`. Pass `--proxy ""` to ignore the environment variable and connect directly.
 
 ```powershell
 sau facebook login --account creator
@@ -19,26 +19,26 @@ sau facebook upload-video --account creator --file videos/demo.mp4 --title "标�
 sau facebook upload-note --account creator --images images/1.jpg images/2.jpg --title "图文标题" --note "正文"
 ```
 
-登录时在可见 Chrome 完成登录，账号保存为 `cookies/facebook_creator.json`。`check` 验证个人主页登录态，不代表 Page 权限或作品发布结果。标题、正文、标签合并为一段配文。当前支持立即发布，未接入个人主页定时；Page 使用独立 `facebook-page` 命令。
+Complete the login in a visible Chrome window; the account is saved as `cookies/facebook_creator.json`. `check` verifies the personal profile login state and says nothing about Page permissions or post publishing results. The title, body and tags are merged into a single caption. Immediate publishing is supported for now; scheduling for personal profiles is not integrated. Pages use the separate `facebook-page` command.
 
-取得原作品链接后管理作品：
+After getting the original post link, manage the post:
 
 ```powershell
-sau facebook verify --account creator --post-url "原作品链接" --owner-id "作者数字ID" --expected-text "原作品正文"
-sau facebook delete --account creator --post-url "原作品链接" --owner-id "作者数字ID" --expected-text "原作品正文" --result .local/trash-result.json
-sau facebook delete --account creator --post-url "原作品链接" --owner-id "作者数字ID" --expected-text "原作品正文" --from-trash --permanent --result .local/delete-result.json
+sau facebook verify --account creator --post-url "original-post-link" --owner-id "author-numeric-ID" --expected-text "original-post-text"
+sau facebook delete --account creator --post-url "original-post-link" --owner-id "author-numeric-ID" --expected-text "original-post-text" --result .local/trash-result.json
+sau facebook delete --account creator --post-url "original-post-link" --owner-id "author-numeric-ID" --expected-text "original-post-text" --from-trash --permanent --result .local/delete-result.json
 ```
 
-删除前同时核对登录用户、作者、原作品编号和正文。默认移至垃圾箱，30 天后由平台删除，返回 `trashed`；加 `--permanent` 立即永久删除，已经在垃圾箱时再加 `--from-trash`。永久删除不可恢复。
+Before deleting, check the logged-in user, the author, the original post ID and the body together. By default the post is moved to the trash, the platform deletes it after 30 days, and `trashed` is returned. Add `--permanent` to delete it permanently right away, and also add `--from-trash` if it is already in the trash. Permanent deletion cannot be undone.
 
-`verify --from-trash` 查询垃圾箱原记录；`verify --deleted` 仅确认编号不在垃圾箱，返回 `absent_from_trash`，不能单凭缺席证明过去发生过永久删除。当前仅检索有限滚动范围的近期作品；没有找到或同文案无法唯一定位时明确失败。
+`verify --from-trash` looks up the original record in the trash. `verify --deleted` only confirms that the ID is not in the trash and returns `absent_from_trash`; absence alone cannot prove that a permanent deletion happened in the past. For now it only searches recent posts within a limited scroll range; if the post is not found, or the same caption cannot identify it uniquely, it fails explicitly.
 
-只有平台出现本次提交的成功提示才认为发表已确认。点击后超时或浏览器断开应视为结果未知：先在同一账号个人主页或垃圾箱核对原作品，不重复上传或重复删除。本地素材不会被删除。完整参数以 `sau facebook upload-video --help`、`upload-note --help`、`verify --help` 和 `delete --help` 为准。
+Treat publishing as confirmed only when the platform shows a success message for this submission. A timeout or browser disconnect after the click means the result is unknown: check the original post on the same account's personal profile or in the trash first, and do not upload again or delete again. Local materials are not deleted. For the full arguments, `sau facebook upload-video --help`, `upload-note --help`, `verify --help` and `delete --help` are authoritative.
 
-## 示例脚本
+## Example scripts
 
-`scripts/examples/` 下的文件是复制用示例，不是运行时依赖。执行前先查看当前 CLI 的 `--help`，替换账号、素材和正文；这些命令可能创建真实作品。
+The files under `scripts/examples/` are examples to copy, not runtime dependencies. Before running them, check the current CLI's `--help` and replace the account, materials and body; these commands may create real posts.
 
-- `facebook_commands.ps1`：PowerShell
-- `facebook_commands.sh`：Bash
-- `facebook_cli_template.py`：Python subprocess
+- `facebook_commands.ps1`: PowerShell
+- `facebook_commands.sh`: Bash
+- `facebook_cli_template.py`: Python subprocess

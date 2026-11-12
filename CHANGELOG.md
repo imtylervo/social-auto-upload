@@ -1,44 +1,44 @@
-# 更新日志
+# Changelog
 
-项目使用 GitHub Release 发布可复用版本；日常合并先记录在这里，发布时把对应版本的内容复制到 Release notes。
+The project publishes reusable versions through GitHub Releases. Day-to-day merges are recorded here first, and the matching version's entries are copied into the Release notes at release time.
 
 ## [Unreleased]
 
-### TikTok (Chrome 版)
+### TikTok (Chrome version)
 
-- 适配 2026-11 的 TikTok Studio 上传表单：发布按钮改用 `data-e2e="post_video_button"`（保留旧选择器作为回退）。
-- 自动关闭遮挡表单的弹窗（"Turn on automatic content checks?" 选择 Cancel，不替用户开启账号设置）。
-- `TiktokVideo` 新增可选参数 `privacy`（`Everyone` / `Friends` / `Only you`）和 `proxy`（Playwright 代理配置）。
-- 新增 `upload_on_page(page)` / `fill_form(page)`：可在外部已登录的 Playwright 页面上执行流程（其他浏览器、持久化 profile、代理）。
-- 新增 `delete_video(page, video_id)`：从 TikTok Studio 内容列表删除指定视频。
-- `detect_upload_status` 和 `click_publish` 增加超时，失败时抛出 `TimeoutError`，不再无限循环。
+- Adapted to the 2026-11 TikTok Studio upload form: the publish button now uses `data-e2e="post_video_button"` (the old selector is kept as a fallback).
+- Automatically close pop-ups that cover the form ("Turn on automatic content checks?" is answered with Cancel, so account settings are not turned on for the user).
+- `TiktokVideo` gains the optional parameters `privacy` (`Everyone` / `Friends` / `Only you`) and `proxy` (Playwright proxy configuration).
+- Added `upload_on_page(page)` / `fill_form(page)`: the flow can run on an already logged-in Playwright page supplied from outside (other browsers, persistent profiles, proxies).
+- Added `delete_video(page, video_id)`: deletes the given video from the TikTok Studio content list.
+- `detect_upload_status` and `click_publish` now have a timeout and raise `TimeoutError` on failure instead of looping forever.
 
-### 结构与 CLI
+### Structure and CLI
 
-- 将 `sau_cli.py` 从单体入口拆为 `sau_commands/` 下的按平台命令模块，入口只负责注册和分发。
-- README、CLI 文档和 Skill 按平台及视频、文章、图文三类整理发布入口。
-- 移除知乎没有实际用途的 `--expected-name` 参数；登录时直接读取当前页面身份并保存账号绑定信息。
-- 知乎文章正式 URL 校验排除 `/edit` 草稿地址，避免把自动保存草稿误报为已发布。
+- Split `sau_cli.py` from a single monolithic entry point into per-platform command modules under `sau_commands/`; the entry point now only registers and dispatches.
+- The README, CLI docs and Skills now organize publishing entry points by platform and by the three content types: video, article and image post.
+- Removed the Zhihu `--expected-name` parameter, which had no practical use; login now reads the identity on the current page directly and saves the account binding information.
+- The Zhihu article final-URL check now excludes `/edit` draft addresses, so an autosaved draft is no longer reported as published.
 
-### 知乎文章
+### Zhihu articles
 
-- 支持 HTML、Markdown、TXT 原稿，正文图片按原稿中的位置上传，不再统一追加到文末。
-- 支持知乎真实编辑器中的 h2、加粗、编号列表、引用和外链校验。
-- PNG 图片使用剪贴板粘贴路径，发布前核对文字、图片顺序、格式和链接。
+- Supports HTML, Markdown and TXT sources. Body images are uploaded at their positions in the source instead of being appended to the end.
+- Supports checking h2 headings, bold text, numbered lists, quotes and external links in Zhihu's real editor.
+- PNG images go through the clipboard paste path; text, image order, formatting and links are checked before publishing.
 
-### 知乎视频
+### Zhihu videos
 
-- CLI 提供完整领域和视频声明可选值，支持实时菜单核对、编号选择和 `--show-options` 查询。
-- 上传前拒绝小于或等于 100KB 的视频。
-- 修正发布成功判断，读取成功弹层打开的 `/pin/<作品ID>` 详情链接；链接读取失败时保留已发表状态。
-- 作品查询兼容新版视频链接；定时发布标为实验性功能。
+- The CLI provides the full lists of category and video-declaration options, and supports checking against the live menu, selecting by number, and querying with `--show-options`.
+- Videos of 100KB or smaller are rejected before upload.
+- Fixed the publish-success check: it now reads the `/pin/<post ID>` detail link opened by the success dialog, and keeps the published status if reading the link fails.
+- Post lookup is compatible with the new video links; scheduled publishing is marked as experimental.
 
-## 发布流程
+## Release process
 
-1. 在 `Unreleased` 中记录用户可感知的变更和验证结果。
-2. 更新 `pyproject.toml` 的 `project.version`，遵循 `MAJOR.MINOR.PATCH`。
-3. 运行专项测试、`git diff --check` 和构建检查。
-4. 创建版本提交和 `v<version>` 标签，推送到 GitHub。
-5. 在 GitHub 创建同名 Release，把本版本日志粘贴到 Release notes，并保留验证范围和已知限制。
+1. Record user-visible changes and verification results under `Unreleased`.
+2. Update `project.version` in `pyproject.toml`, following `MAJOR.MINOR.PATCH`.
+3. Run the targeted tests, `git diff --check` and the build checks.
+4. Create the version commit and the `v<version>` tag, and push them to GitHub.
+5. Create a Release with the same name on GitHub, paste this version's log into the Release notes, and keep the verification scope and known limitations.
 
-版本发布前，未完成真实平台验收的能力必须明确写成“待验收”，不能写成已支持。
+Before a release, any capability that has not passed real-platform acceptance must be explicitly marked "pending acceptance" and must not be listed as supported.

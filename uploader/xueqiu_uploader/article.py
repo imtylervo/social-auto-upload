@@ -1,4 +1,4 @@
-"""雪球长文：结构化原稿、原位置插图、封面、预览与单次发表。"""
+"""Xueqiu long post: structured source, images at their source positions, cover, preview and a single publish."""
 from __future__ import annotations
 
 import json
@@ -20,7 +20,7 @@ from uploader.xueqiu_uploader.verification import check_xueqiu_article_content, 
 
 
 class XueqiuArticle:
-    """通过原生粘贴与图片上传保留文章结构，以服务端确认作为发表结果。"""
+    """Keep the article structure through native paste and image upload; the server's confirmation is the publish result."""
 
     def __init__(self, title, content_file, account_file, visibility="公开",
                  declaration="不添加创作声明", prepare_only=False, headless=False, debug=False,
@@ -36,27 +36,27 @@ class XueqiuArticle:
         self.cover = Path(cover).expanduser().resolve() if cover else None
 
     def validate_upload_args(self):
-        """所有本地参数在创建远端草稿前校验，不猜测尚未观察到的长度上限。"""
+        """All local parameters are checked before a remote draft is created; length limits not yet observed are not guessed."""
         if not self.title or "\n" in self.title or "\r" in self.title:
-            raise ValueError("雪球标题必须为非空单行文字")
+            raise ValueError("Xueqiu title must be a non-empty single line of text")
         self.document = load_xueqiu_article(self.content_file)
         if self.visibility not in XUEQIU_VISIBILITY:
-            raise ValueError(f"分享范围必须为: {', '.join(XUEQIU_VISIBILITY)}")
+            raise ValueError(f"Sharing scope must be one of: {', '.join(XUEQIU_VISIBILITY)}")
         if self.declaration not in XUEQIU_DECLARATIONS:
-            raise ValueError(f"创作声明必须为: {', '.join(XUEQIU_DECLARATIONS)}")
+            raise ValueError(f"Creation declaration must be one of: {', '.join(XUEQIU_DECLARATIONS)}")
         for image in self.document.images + ([self.cover] if self.cover else []):
             if image.suffix.lower() not in XUEQIU_IMAGE_SUFFIXES:
-                raise ValueError(f"雪球图片支持: {', '.join(XUEQIU_IMAGE_SUFFIXES)}")
+                raise ValueError(f"Xueqiu supports these image types: {', '.join(XUEQIU_IMAGE_SUFFIXES)}")
             if not image.is_file():
-                raise FileNotFoundError(f"图片不存在: {image}")
+                raise FileNotFoundError(f"Image not found: {image}")
             if image.stat().st_size == 0:
-                raise ValueError(f"图片不能为空: {image}")
+                raise ValueError(f"Image must not be empty: {image}")
         if not self.account_file.is_file():
-            raise FileNotFoundError("请先执行 sau xueqiu login 保存账号")
+            raise FileNotFoundError("Run sau xueqiu login first to save the account")
         self.identity = load_xueqiu_identity(self.account_file)
 
     async def fill_article_body(self, page, body):
-        """在原稿图片位置放置唯一标记，原生上传后再核对完整图文交错顺序。"""
+        """Put a unique marker at each source image position; after the native upload check the full interleaved order of text and images."""
         parts = []
         insertions = []
         for part in self.document.parts:
@@ -72,14 +72,14 @@ class XueqiuArticle:
         ])""", "".join(parts))
         await body.click()
         await body.press("Meta+V" if sys.platform == "darwin" else "Control+V")
-        # 标题字段用于失焦；等待本次末尾文字实际进入模型，再开始选择图片标记。
-        await page.get_by_placeholder("请输入标题", exact=True).click()
+        # The title field is used to blur; wait until the final text of this run is actually in the model before selecting image markers.
+        await page.get_by_placeholder("请输入标题", exact=True).click()  # "请输入标题" = enter a title
         for marker, _ in insertions:
             await expect(body).to_contain_text(marker)
         self.uploaded_images = []
         for index, (marker, image) in enumerate(insertions):
-            # 在正文实际文本节点选择唯一标记；使用原生选区而非改写 ProseMirror innerHTML。
-            # 实测该选区经 Shift 刷新后会被工具栏上传替换，后续段落保持原位。
+            # Select the unique marker in an actual text node of the body; use a native selection instead of rewriting the ProseMirror innerHTML.
+            # Tested: after a Shift refresh this selection is replaced by the toolbar upload, and the following paragraphs stay in place.
             await body.evaluate("""(body, marker) => {
                 body.focus(); const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
                 let node;
@@ -94,105 +94,105 @@ class XueqiuArticle:
                 throw Error('找不到本次原稿图片位置标记');
             }""", marker)
             await body.press("Shift")
-            # data-tip 是实测上传动作语义；限定 snb_toolbar 排除独立封面 input。
+            # data-tip is the tested meaning of the upload action ("上传图片" = upload image); scoping to snb_toolbar excludes the separate cover input.
             async with page.expect_file_chooser() as chooser:
                 await page.locator('#snb_toolbar [data-tip="上传图片"]').click()
             file_chooser = await chooser.value
-            # input 保留旧文件；只清空原生值而不派发空 change，允许相同文件在不同原稿位置出现。
+            # The input keeps the old file; clear only the native value without dispatching an empty change, so the same file can appear at different source positions.
             await file_chooser.element.evaluate("input => { input.value = ''; }")
             await file_chooser.set_files(str(image))
             await expect(body).not_to_contain_text(marker)
             await expect(body.locator("img")).to_have_count(index + 1, timeout=60000)
-            # 图片按原稿顺序逐个替换，已断言数量；data/blob 预览不代表服务端完成。
+            # Images are replaced one by one in source order and the count is asserted; a data/blob preview does not mean the server is done.
             inserted = body.locator("img").nth(index)
             await expect(inserted).to_have_attribute("src", re.compile(r"^(?:https:)?//xqimg\.imedao\.com/"), timeout=60000)
             await expect(inserted).to_have_js_property("complete", True, timeout=60000)
             if await inserted.evaluate("e => e.naturalWidth") <= 0:
-                raise RuntimeError(f"正文图片无法加载: {image.name}")
+                raise RuntimeError(f"Body image cannot be loaded: {image.name}")
             self.uploaded_images.append(await inserted.evaluate("e => e.src"))
         await page.get_by_placeholder("请输入标题", exact=True).click()
         await check_xueqiu_article_content(body, self.document)
 
     async def fill_article_form(self, page: Page):
-        """按真实字段填写、读回选项和正文，再独立检查预览与自动保存。"""
-        # 标题占位符表达字段职责；正文 placeholder 在输入后消失，使用 editor 直属可编辑节点，
-        # 排除上传图片内部 contenteditable=false 的工具容器，填表前后使用同一定位器。
+        """Fill in the real fields, read back options and body, then check the preview and autosave separately."""
+        # The title placeholder expresses the field's role; the body placeholder disappears after input, so use the editable node directly under the editor,
+        # excluding the contenteditable=false tool containers inside uploaded images; the same locator is used before and after filling in.
         title = page.get_by_placeholder("请输入标题", exact=True)
         body = page.locator('#editor > [contenteditable="true"]')
         await expect(title).to_have_count(1)
         await expect(body).to_have_count(1)
-        # 新任务只写空编辑器；页面若恢复已有草稿，不覆盖用户原文。
+        # A new task only writes into an empty editor; if the page restores an existing draft, the user's text is not overwritten.
         if (await title.input_value()).strip() or (await body.inner_text()).strip() or await body.locator("img").count():
-            raise RuntimeError("雪球编辑器已有内容，拒绝覆盖；请先处理现有草稿")
+            raise RuntimeError("The Xueqiu editor already has content; refusing to overwrite it. Deal with the existing draft first")
         await title.fill(self.title)
         await expect(title).to_have_value(self.title)
         await self.fill_article_body(page, body)
         self.cover_url = None
         if self.cover:
-            # 封面字段行以 label 限域，input 的 type 表达上传用途，不与工具栏正文上传器混用。
+            # The cover field row is scoped by its label ("封面图片：" = cover image), and the input type expresses the upload purpose; not mixed up with the toolbar body uploader.
             cover_row = page.locator('div[class*="index_sectionFlex_"]').filter(
                 has=page.get_by_text("封面图片：", exact=True),
             )
             await cover_row.locator('input[type="file"]').set_input_files(str(self.cover))
-            # 实测封面必须经过独立裁剪弹窗；保留默认裁剪框，不猜测尺寸或操作隐藏状态。
+            # Tested: the cover must go through a separate crop dialog ("选择封面图片" = choose cover image); keep the default crop box, do not guess sizes or touch hidden state.
             crop = page.locator('div[class*="modal_modal-content_"]').filter(
                 has=page.get_by_text("选择封面图片", exact=True),
             )
             await expect(crop).to_be_visible()
             await expect(crop.locator('img[alt="Crop"]')).to_have_js_property("complete", True)
             if await crop.locator('img[alt="Crop"]').evaluate("e => e.naturalWidth") <= 0:
-                raise RuntimeError("封面裁剪预览无法加载")
-            await crop.get_by_role("button", name="确认裁剪", exact=True).click()
+                raise RuntimeError("The cover crop preview cannot be loaded")
+            await crop.get_by_role("button", name="确认裁剪", exact=True).click()  # "确认裁剪" = confirm crop
             await expect(crop).to_have_count(0, timeout=60000)
-            # 实测成功封面以背景图展示，原上传按钮被 hidden；不能检查占位 img 的固定地址。
+            # Tested: a successful cover is shown as a background image and the original upload button is hidden; the fixed URL of the placeholder img cannot be checked.
             cover_preview = cover_row.locator('div[class*="index_input-cover-pic-btn_"]')
             await expect(cover_preview).to_have_attribute("style", re.compile(r".*xqimg\.imedao\.com/.*"), timeout=60000)
             self.cover_url = await cover_preview.evaluate(
                 "e => new URL(getComputedStyle(e).backgroundImage.slice(5, -2), location.href).href")
-        for label, value in (("分享范围：", self.visibility), ("创作声明：", self.declaration)):
-            # class 仅保留字段行和组件职责前缀；以本行 label 限域，排除另一组同构下拉菜单。
+        for label, value in (("分享范围：", self.visibility), ("创作声明：", self.declaration)):  # field labels: sharing scope, creation declaration
+            # class keeps only the field row and component role prefixes; scoping to this row's label excludes the other dropdown of the same structure.
             row = page.locator('div[class*="index_sectionFlex_"]').filter(
                 has=page.get_by_text(label, exact=True),
             )
             selected = row.locator('div[class*="index_selectWrap_"]')
             await selected.click()
-            # optionContainer 是展开选项容器；visible 排除当前未展开的另一菜单。
+            # optionContainer is the expanded option container; visible excludes the other menu that is not expanded now.
             option = row.locator('div[class*="index_optionContainer_"]:visible').get_by_text(value, exact=True)
             await expect(option).to_have_count(1)
             await option.click()
             await expect(selected).to_contain_text(value)
-        # publish_state 是独立自动保存状态区域，不以正文里的同名文字判断保存完成。
-        await expect(page.locator('div[class*="publish_state_"]')).to_contain_text("已经保存至草稿", timeout=60000)
-        await page.get_by_role("button", name="预览", exact=True).click()
-        # 预览容器的业务前缀在实测 DOM 中稳定；h1 与 content-text 分别承载预览标题、正文。
+        # publish_state is a separate autosave status area; saving is not judged from same-named text in the body.
+        await expect(page.locator('div[class*="publish_state_"]')).to_contain_text("已经保存至草稿", timeout=60000)  # "已经保存至草稿" = saved to drafts
+        await page.get_by_role("button", name="预览", exact=True).click()  # "预览" = Preview
+        # The business prefix of the preview container is stable in the tested DOM; h1 and content-text hold the preview title and body.
         preview = page.locator('div[class*="index_preview-content_"]')
         await expect(preview).to_be_visible()
         await expect(preview.locator("h1")).to_have_text(self.title)
-        # 预览由异步服务端结果填入，先等本次文字，不能只等空预览外壳可见。
+        # The preview is filled in by an async server result; wait for this run's text first, not just for the empty preview shell to be visible.
         preview_body = preview.locator('div[class*="index_content-text_"] > div')
         await expect(preview_body).to_contain_text(next(text.strip() for text in self.document.text if text.strip()), timeout=30000)
         await check_xueqiu_article_content(preview_body, self.document)
-        # 预览 content-text 直属封面 img 与直属 div 内的正文图片并存；只在后者核对插图。
+        # The cover img directly under the preview content-text sits next to body images inside a direct div; check inserted images only in the latter.
         preview_images = preview.locator('div[class*="index_content-text_"] > div img')
         await expect(preview_images).to_have_count(len(self.uploaded_images))
         for index, source in enumerate(self.uploaded_images):
-            # 平台预览会给 // 地址补 https；比较解析后的 src，并按正文顺序排除错图或重排。
+            # The platform preview adds https to // URLs; compare the parsed src and exclude wrong or reordered images in body order.
             await expect(preview_images.nth(index)).to_have_js_property("src", source)
             await expect(preview_images.nth(index)).to_have_js_property("complete", True)
             if await preview_images.nth(index).evaluate("e => e.naturalWidth") <= 0:
-                raise RuntimeError(f"预览中第 {index + 1} 张正文图片无法加载")
+                raise RuntimeError(f"Body image {index + 1} in the preview cannot be loaded")
         if self.cover_url:
-            # 实测 index_first-pic 是预览直属封面，独立于正文 div，核对本次裁剪结果。
+            # Tested: index_first-pic is the cover directly under the preview, separate from the body div; check this crop result.
             cover_image = preview.locator('div[class*="index_content-text_"] > img[class*="index_first-pic_"]')
             await expect(cover_image).to_have_js_property("src", self.cover_url)
             await expect(cover_image).to_have_js_property("complete", True)
             if await cover_image.evaluate("e => e.naturalWidth") <= 0:
-                raise RuntimeError("预览中的封面无法加载")
+                raise RuntimeError("The cover in the preview cannot be loaded")
         if (await read_xueqiu_identity(page))["uid"] != self.identity["uid"]:
-            raise RuntimeError("雪球填写期间账号发生变化，已中止")
+            raise RuntimeError("The Xueqiu account changed while filling in the form; aborted")
 
     async def main(self) -> dict:
-        """准备模式保留草稿和预览；提交模式只点击一次，结果未知时禁止自动重发。"""
+        """Prepare mode keeps the draft and preview; submit mode clicks only once, and automatic republishing is forbidden when the result is unknown."""
         self.validate_upload_args()
         results_dir = self.account_file.parent / "xueqiu_results"
         results_dir.mkdir(exist_ok=True)
@@ -211,9 +211,9 @@ class XueqiuArticle:
                 page = await context.new_page()
                 response = await page.goto(XUEQIU_ARTICLE_URL, wait_until="domcontentloaded", timeout=45000)
                 if response is not None and response.status >= 400:
-                    raise RuntimeError(f"雪球编辑器访问失败，HTTP {response.status}")
+                    raise RuntimeError(f"Failed to open the Xueqiu editor, HTTP {response.status}")
                 if (await read_xueqiu_identity(page))["uid"] != self.identity["uid"]:
-                    raise RuntimeError("雪球主体与绑定账号不一致")
+                    raise RuntimeError("The Xueqiu identity does not match the bound account")
                 result["remote_draft_possible"] = True
                 await self.fill_article_form(page)
                 result.update(images=self.uploaded_images, cover=self.cover_url,
@@ -224,17 +224,17 @@ class XueqiuArticle:
                 if self.prepare_only:
                     result.update(success=True, status="prepared", url=page.url)
                     return result
-                # index_preview_ 是预览遮罩，直接子级 index_close_ 是实测关闭控件；不删除遮罩或强制点击。
+                # index_preview_ is the preview overlay and its direct child index_close_ is the tested close control; the overlay is not removed and no click is forced.
                 await page.locator('div[class*="index_preview_"] > div[class*="index_close_"]').click()
-                # 关闭后组件仍保留在 DOM，由父层隐藏；不能要求节点被删除。
+                # After closing, the component stays in the DOM and is hidden by its parent; the node cannot be required to be removed.
                 await expect(page.locator('div[class*="index_preview-content_"]')).to_be_hidden()
-                publish = page.get_by_role("button", name="发布", exact=True)
-                # 页面用 class 表达禁用态，不能仅依赖 HTML disabled；保留语义前缀排除哈希变化。
+                publish = page.get_by_role("button", name="发布", exact=True)  # "发布" = Publish
+                # The page expresses the disabled state with a class, so HTML disabled alone cannot be relied on; keep the semantic prefix to ignore hash changes.
                 await expect(publish).not_to_have_class(re.compile(r".*publish_disabled_.*"), timeout=30000)
                 result.update(status="submission_unknown", editor_url=page.url)
                 result_file.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-                # 实测最终发表 POST /xq/statuses/update.json 返回作品 ID、user_id、title、text、is_private。
-                # 页面随后回首页，因此不能用“跳转作者详情”这一错误假设判断成功。
+                # Tested: the final publish POST /xq/statuses/update.json returns the post ID, user_id, title, text and is_private.
+                # The page then returns to the home page, so the wrong assumption "it jumps to the author's detail page" cannot be used to judge success.
                 async with page.expect_response(lambda response: response.request.method == "POST"
                                                 and response.url == "https://mp.xueqiu.com/xq/statuses/update.json",
                                                 timeout=60000) as submitted:
@@ -243,22 +243,22 @@ class XueqiuArticle:
                 payload = await response.json()
                 content_id = payload.get("id")
                 if not response.ok or not isinstance(content_id, int) or isinstance(content_id, bool) or content_id <= 0:
-                    raise RuntimeError(f"雪球未确认受理: HTTP {response.status}，{payload.get('error_description', payload.get('error_code', '缺少作品 ID'))}")
-                # 先持久化已返回的 ID，即使后续内容核对异常也只能查询原作品，禁止重发。
+                    raise RuntimeError(f"Xueqiu did not confirm acceptance: HTTP {response.status}, {payload.get('error_description', payload.get('error_code', '缺少作品 ID'))}")
+                # Persist the returned ID first; even if a later content check fails, only the original post may be looked up, republishing is forbidden.
                 result["content_id"] = str(content_id)
                 result_file.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
                 if str(payload.get("user_id")) != self.identity["uid"] or payload.get("title") != self.title:
-                    raise RuntimeError("雪球受理作品的主体或标题不符，请核查原作品")
+                    raise RuntimeError("The identity or title of the post Xueqiu accepted does not match; check the original post")
                 if payload.get("is_private") is not (self.visibility == "私人"):
-                    raise RuntimeError("雪球受理作品的分享范围不符，请核查原作品")
-                # 用平台返回的已发表正文创建独立页面核对，不改写编辑器模型，也不追加真实发表动作。
+                    raise RuntimeError("The sharing scope of the post Xueqiu accepted does not match; check the original post")
+                # Check on a separate page built from the published body the platform returned; the editor model is not rewritten and no real publish action is added.
                 check_page = await context.new_page()
                 await check_page.set_content(payload.get("text") or "")
                 await check_xueqiu_article_content(check_page.locator("body"), self.document, self.uploaded_images)
                 result.update(success=True, status="published",
                               url=f"https://xueqiu.com/{self.identity['uid']}/{content_id}")
                 result_file.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-                # 发表响应已确认受理；再查已发布原 ID，核验不能误触发第二次提交。
+                # The publish response confirmed acceptance; then look up the published original ID, and verification must not trigger a second submission.
                 record = await query_xueqiu_article(page, self.identity, content_id, self.title, self.visibility)
                 await check_page.set_content(record.get("text") or "")
                 await check_xueqiu_article_content(check_page.locator("body"), self.document, self.uploaded_images)
@@ -277,5 +277,5 @@ class XueqiuArticle:
                 raise
             finally:
                 result_file.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-                print(f"雪球操作结果: {result_file}", flush=True)
+                print(f"Xueqiu operation result: {result_file}", flush=True)
                 await browser.close()

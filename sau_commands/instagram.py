@@ -1,4 +1,4 @@
-"""instagram 的命令参数与执行逻辑。"""
+"""Command arguments and execution logic for instagram."""
 from __future__ import annotations
 import json
 from dataclasses import dataclass
@@ -21,44 +21,44 @@ from sau_commands.arguments import (
 
 
 def register(platform_parsers):
-    """声明本平台命令、参数及合法选项。"""
+    """Declare this platform's commands, arguments and allowed options."""
     schedule_help = SCHEDULE_FORMAT.replace("%", "%%")
     instagram_parser = platform_parsers.add_parser("instagram", help="Instagram independent web operations")
     instagram_actions = instagram_parser.add_subparsers(dest="action", required=True)
     for action_name in ("login", "check"):
         action_parser = instagram_actions.add_parser(action_name, help=f"Instagram {action_name}")
         action_parser.add_argument("--account", required=True)
-        action_parser.add_argument("--proxy", default=INSTAGRAM_PROXY, help="代理地址；不传时直连")
+        action_parser.add_argument("--proxy", default=INSTAGRAM_PROXY, help="Proxy address; connect directly when omitted")
         if action_name == "login":
             add_runtime_flags(action_parser)
             action_parser.set_defaults(headless=False)
-    instagram_video = instagram_actions.add_parser("upload-video", help="向 Instagram 发布视频/Reel")
+    instagram_video = instagram_actions.add_parser("upload-video", help="Publish a video/Reel to Instagram")
     instagram_video.add_argument("--account", required=True)
     instagram_video.add_argument("--file", required=True, type=existing_file_path)
-    instagram_video.add_argument("--thumbnail", type=existing_file_path, help="Reel 自定义封面（JPG/JPEG/PNG）")
+    instagram_video.add_argument("--thumbnail", type=existing_file_path, help="Custom Reel cover (JPG/JPEG/PNG)")
     instagram_video.add_argument("--title", required=True)
     instagram_video.add_argument("--desc", default="")
     instagram_video.add_argument("--tags", default="")
-    instagram_video.add_argument("--proxy", default=INSTAGRAM_PROXY, help="代理地址；不传时直连")
+    instagram_video.add_argument("--proxy", default=INSTAGRAM_PROXY, help="Proxy address; connect directly when omitted")
     instagram_video.add_argument("--result", type=Path)
     add_runtime_flags(instagram_video)
     instagram_video.set_defaults(headless=False)
-    instagram_note = instagram_actions.add_parser("upload-note", help="向 Instagram 发布图片或轮播")
+    instagram_note = instagram_actions.add_parser("upload-note", help="Publish an image or carousel to Instagram")
     instagram_note.add_argument("--account", required=True)
     instagram_note.add_argument("--images", required=True, nargs="+", type=existing_file_path)
     instagram_note.add_argument("--title", required=True)
     instagram_note.add_argument("--note", default="")
     instagram_note.add_argument("--tags", default="")
-    instagram_note.add_argument("--proxy", default=INSTAGRAM_PROXY, help="代理地址；不传时直连")
+    instagram_note.add_argument("--proxy", default=INSTAGRAM_PROXY, help="Proxy address; connect directly when omitted")
     instagram_note.add_argument("--result", type=Path)
     add_runtime_flags(instagram_note)
     instagram_note.set_defaults(headless=False)
     for action_name in ("verify", "delete"):
-        action_parser = instagram_actions.add_parser(action_name, help="核对 Instagram 原作品" if action_name == "verify" else "核对后将 Instagram 原作品移至最近删除")
+        action_parser = instagram_actions.add_parser(action_name, help="Check the original Instagram post" if action_name == "verify" else "Check the original Instagram post, then move it to Recently Deleted")
         action_parser.add_argument("--account", required=True)
         action_parser.add_argument("--post-url", required=True)
         action_parser.add_argument("--expected-text", required=True)
-        action_parser.add_argument("--proxy", default=INSTAGRAM_PROXY, help="代理地址；不传时直连")
+        action_parser.add_argument("--proxy", default=INSTAGRAM_PROXY, help="Proxy address; connect directly when omitted")
         action_parser.add_argument("--result", type=Path)
         add_runtime_flags(action_parser)
         action_parser.set_defaults(headless=False)
@@ -106,7 +106,7 @@ async def upload_instagram_content(request: InstagramUploadRequest) -> dict:
 
 
 async def run(args):
-    """执行本平台命令；发布结果由平台实现核验。"""
+    """Run this platform's command; the platform implementation verifies the publish result."""
     if args.action == "login":
         result = await login_instagram_account(args.account, headless=args.headless, proxy=args.proxy)
         if not result["success"]:

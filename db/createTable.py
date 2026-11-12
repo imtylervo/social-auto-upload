@@ -2,18 +2,18 @@ import sqlite3
 import json
 import os
 
-# 数据库文件路径（如果不存在会自动创建）
+# Database file path (created automatically if it does not exist)
 db_file = './database.db'
 
-# 如果数据库已存在，则删除旧的表（可选）
+# If the database already exists, delete the old tables (optional)
 # if os.path.exists(db_file):
 #     os.remove(db_file)
 
-# 连接到SQLite数据库（如果文件不存在则会自动创建）
+# Connect to the SQLite database (the file is created automatically if it does not exist)
 conn = sqlite3.connect(db_file)
 cursor = conn.cursor()
 
-# 创建账号记录表
+# Create the account table
 cursor.execute('''
 CREATE TABLE IF NOT EXISTS user_info (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS user_info (
 )
 ''')
 
-# 创建文件记录表
+# Create the file records table
 cursor.execute('''CREATE TABLE IF NOT EXISTS file_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT, -- 唯一标识每条记录
     filename TEXT NOT NULL,               -- 文件名
@@ -35,8 +35,8 @@ cursor.execute('''CREATE TABLE IF NOT EXISTS file_records (
 ''')
 
 
-# 提交更改
+# Commit the changes
 conn.commit()
-print("✅ 表创建成功")
-# 关闭连接
+print("✅ Tables created")
+# Close the connection
 conn.close()

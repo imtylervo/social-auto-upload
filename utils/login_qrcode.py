@@ -17,11 +17,11 @@ def build_login_qrcode_path(account_file: str, suffix: str = "login_qrcode") -> 
 
 def save_data_url_image(data_url: str, output_path: Path) -> Path:
     if not data_url.startswith("data:image/"):
-        raise ValueError("二维码地址不是 data:image 格式")
+        raise ValueError("QR code URL is not in data:image format")
 
     header, encoded = data_url.split(",", 1)
     if ";base64" not in header:
-        raise ValueError("二维码图片不是 base64 编码")
+        raise ValueError("QR code image is not base64-encoded")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_bytes(base64.b64decode(encoded))
@@ -36,7 +36,7 @@ def remove_qrcode_file(qrcode_path: Path | None) -> bool:
 
 
 def decode_qrcode_from_path(qrcode_path: Path) -> str | None:
-    # Windows 下 cv2.imread 对中文路径不稳定，优先走 numpy+imdecode
+    # On Windows cv2.imread is unreliable with Chinese paths, so prefer numpy+imdecode
     image = None
     try:
         data = np.fromfile(str(qrcode_path), dtype=np.uint8)
@@ -75,15 +75,15 @@ def print_terminal_qrcode(
     border: int = 0,
 ) -> None:
     print()
-    print(f"请使用{app_name}扫描下方二维码登录：")
+    print(f"Scan the QR code below with {app_name} to log in:")
     qrcode = segno.make(qrcode_content, error="L", boost_error=False)
     try:
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8")
         qrcode.terminal(compact=compact, border=border)
     except (UnicodeEncodeError, OSError):
-        print("当前终端不支持 Unicode 二维码字符，已切换为 ASCII 打印：")
+        print("This terminal does not support Unicode QR code characters; printing in ASCII instead:")
         _print_ascii_qrcode(qrcode)
-    print("在 Windows 下建议使用 Windows Terminal（支持 UTF-8，可完整显示二维码）")
-    print(f"否则请打开 {qrcode_path} 扫码")
+    print("On Windows, Windows Terminal is recommended (it supports UTF-8 and shows the full QR code)")
+    print(f"Otherwise open {qrcode_path} and scan it")
     print()

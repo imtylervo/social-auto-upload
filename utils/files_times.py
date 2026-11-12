@@ -14,23 +14,23 @@ def get_absolute_path(relative_path: str, base_dir: str = None) -> str:
 
 def get_title_and_hashtags(filename):
     """
-  获取视频标题和 hashtag
+  Get the video title and hashtags
 
   Args:
-    filename: 视频文件名
+    filename: video file name
 
   Returns:
-    视频标题和 hashtag 列表
+    The video title and a list of hashtags
   """
 
-    # 获取视频标题和 hashtag txt 文件名
+    # Get the name of the txt file with the video title and hashtags
     txt_filename = filename.replace(".mp4", ".txt")
 
-    # 读取 txt 文件
+    # Read the txt file
     with open(txt_filename, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # 获取标题和 hashtag
+    # Get the title and hashtags
     splite_str = content.strip().split("\n")
     title = splite_str[0]
     hashtags = splite_str[1].replace("#", "").split(" ")

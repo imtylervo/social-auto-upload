@@ -1,53 +1,53 @@
 ---
 name: bilibili-upload
-description: 当 agent 需要通过已安装的 `sau` CLI 完成 Bilibili 登录、账号校验或视频上传时使用这个 skill。优先使用 `sau bilibili ...`，程序会自动准备 `biliup`，不要求用户手动安装。
+description: Use this skill when an agent needs to log in to Bilibili, validate the account or upload videos through the installed `sau` CLI. Prefer `sau bilibili ...`; the program prepares `biliup` automatically, so the user does not need to install it manually.
 license: MIT-0
 slug: social-auto-upload-bilibili-upload
-displayName: Bilibili 视频发布
+displayName: Bilibili video publishing
 version: 1.0.0
-summary: 登录哔哩哔哩并发布视频，支持分区选择。
+summary: Log in to Bilibili and publish videos, with category selection.
 ---
 
-# Bilibili 上传 Skill
+# Bilibili upload Skill
 
-优先把 `sau` 作为主接口。
+Use `sau` as the primary interface.
 
-不要一开始就让用户自己找 `biliup` 或手动下载 release。
-程序会在运行时自动检查、自动下载、自动更新 `biliup`。
+Do not start by asking the user to find `biliup` or download a release manually.
+The program checks, downloads and updates `biliup` automatically at runtime.
 
-## 功能概览
+## Overview
 
-| 功能 | 命令入口 | 说明 |
+| Function | Command entry | Notes |
 | --- | --- | --- |
-| 登录 | `sau bilibili login --account <name>` | 需要用户自己在本地真实终端里执行，用于生成或刷新登录信息 |
-| 校验 | `sau bilibili check --account <name>` | 检查指定账号当前是否有效 |
-| 视频上传 | `sau bilibili upload-video ...` | 上传一条 Bilibili 视频 |
+| Login | `sau bilibili login --account <name>` | The user must run it in a real local terminal; it creates or refreshes the login information |
+| Check | `sau bilibili check --account <name>` | Check whether the given account is currently valid |
+| Video upload | `sau bilibili upload-video ...` | Upload one Bilibili video |
 
-## 默认工作流
+## Default workflow
 
-1. 先确认 `references/runtime-requirements.md`
-2. 再确认 `references/cli-contract.md`
-3. 执行匹配的 `sau bilibili ...` 命令
-4. 如果命令失败，再看 `references/troubleshooting.md`
+1. First confirm `references/runtime-requirements.md`
+2. Then confirm `references/cli-contract.md`
+3. Run the matching `sau bilibili ...` command
+4. If the command fails, read `references/troubleshooting.md`
 
-## 命令选择建议
+## Choosing a command
 
-- 用户没有登录信息，先让用户自己在本地终端执行 `login`
-- 用户只想确认账号状态，先用 `check`
-- 用户要发视频，用 `upload-video`
+- If the user has no login information, first have the user run `login` in a local terminal
+- If the user only wants to confirm the account state, use `check`
+- If the user wants to publish a video, use `upload-video`
 
-## 执行前检查
+## Checks before running
 
-- 优先确认当前环境能运行 `sau`
-- 如果 `sau` 不在 PATH 中，可以用仓库里的 `sau_cli.py`
-- 不要要求用户手动下载 `biliup`
-- 第一次运行 Bilibili 命令时，程序可能会自动联网准备 `biliup`
-- 对 agent 来说，不要在非交互环境里硬跑 `sau bilibili login`
-- 正确做法是让用户自己在本地终端执行 `sau bilibili login --account <name>`
-- 如果终端里的二维码显示不完整，提醒用户直接打开当前目录下的 `qrcode.png` 扫码
+- First confirm that `sau` can run in the current environment
+- If `sau` is not on PATH, you can use `sau_cli.py` in the repository
+- Do not ask the user to download `biliup` manually
+- The first time a Bilibili command runs, the program may go online to prepare `biliup` automatically
+- For an agent, do not force `sau bilibili login` to run in a non-interactive environment
+- The right approach is to have the user run `sau bilibili login --account <name>` in a local terminal
+- If the QR code in the terminal is displayed incompletely, remind the user to open `qrcode.png` in the current directory and scan it
 
-## 参考文档
+## References
 
-- 运行前提：`references/runtime-requirements.md`
-- CLI 契约：`references/cli-contract.md`
-- 故障排查：`references/troubleshooting.md`
+- Runtime prerequisites: `references/runtime-requirements.md`
+- CLI contract: `references/cli-contract.md`
+- Troubleshooting: `references/troubleshooting.md`

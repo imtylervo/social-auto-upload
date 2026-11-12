@@ -2,45 +2,45 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
-  // 是否是第一次进入账号管理页面
+  // Whether this is the first visit to the account management page
   const isFirstTimeAccountManagement = ref(true)
   
-  // 是否是第一次进入素材管理页面
+  // Whether this is the first visit to the material management page
   const isFirstTimeMaterialManagement = ref(true)
 
-  // 账号管理页面刷新状态
+  // Refresh state of the account management page
   const isAccountRefreshing = ref(false)
 
-  // 素材列表数据
+  // Material list data
   const materials = ref([])
   
-  // 设置账号管理页面已访问
+  // Mark the account management page as visited
   const setAccountManagementVisited = () => {
     isFirstTimeAccountManagement.value = false
   }
   
-  // 设置素材管理页面已访问
+  // Mark the material management page as visited
   const setMaterialManagementVisited = () => {
     isFirstTimeMaterialManagement.value = false
   }
   
-  // 重置所有访问状态（用于重新登录或刷新应用时）
+  // Reset all visit states (on re-login or app refresh)
   const resetVisitStatus = () => {
     isFirstTimeAccountManagement.value = true
     isFirstTimeMaterialManagement.value = true
   }
 
-  // 更新素材列表
+  // Update the material list
   const setMaterials = (materialList) => {
     materials.value = materialList
   }
 
-  // 添加新素材
+  // Add a new material
   const addMaterial = (material) => {
     materials.value.push(material)
   }
 
-  // 删除素材
+  // Delete a material
   const removeMaterial = (materialId) => {
     const index = materials.value.findIndex(m => m.id === materialId)
     if (index > -1) {
@@ -48,7 +48,7 @@ export const useAppStore = defineStore('app', () => {
     }
   }
   
-  // 设置账号管理页面刷新状态
+  // Set the refresh state of the account management page
   const setAccountRefreshing = (status) => {
     isAccountRefreshing.value = status
   }

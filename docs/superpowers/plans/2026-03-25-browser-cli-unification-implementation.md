@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为抖音、快手、小红书三家浏览器平台统一 `sau` CLI 契约，补齐小红书 CLI/skill，并把视频正文统一为 `desc`、图文正文统一为 `note`。
+**Goal:** Unify the `sau` CLI contract for the three browser platforms (Douyin, Kuaishou, Xiaohongshu), add the Xiaohongshu CLI/skill, and unify the video body as `desc` and the image post body as `note`.
 
-**Architecture:** 保持现有 `sau_cli.py` 单文件主入口，不引入新的 CLI 框架。`sau_cli.py` 负责 parser、request dataclass、dispatch 和账号文件解析；各平台 uploader 只做最小字段接线；skill、README、CLI/install/update 文档、examples 同步切到统一契约，避免对外同时暴露多套命名。
+**Architecture:** Keep the existing single-file main entry `sau_cli.py` and do not introduce a new CLI framework. `sau_cli.py` handles the parser, request dataclasses, dispatch and account file resolution. Each platform uploader only gets the minimal field wiring. The skills, README, CLI/install/update docs and examples switch to the unified contract together, so that several sets of names are never exposed externally at once.
 
 **Tech Stack:** Python 3.10+, `argparse`, `asyncio`, `dataclasses`, `pathlib`, `unittest`, existing Patchright-based uploaders, repository markdown docs
 
@@ -15,40 +15,40 @@
 ### New files
 
 - `tests/test_sau_browser_cli.py`
-  - 覆盖三家浏览器平台统一 CLI parser / dispatch / request 映射
+  - Covers the unified CLI parser / dispatch / request mapping of the three browser platforms
 - `skills/xiaohongshu-upload/SKILL.md`
-  - 小红书 CLI skill 主说明
+  - Main description of the Xiaohongshu CLI skill
 - `skills/xiaohongshu-upload/references/runtime-requirements.md`
-  - 小红书运行前提
+  - Xiaohongshu runtime prerequisites
 - `skills/xiaohongshu-upload/references/cli-contract.md`
-  - 小红书 CLI 契约
+  - Xiaohongshu CLI contract
 - `skills/xiaohongshu-upload/references/troubleshooting.md`
-  - 小红书排障文档
-  - PowerShell 示例命令
-  - shell 示例命令
-  - Python 命令模板
+  - Xiaohongshu troubleshooting doc
+  - PowerShell example commands
+  - Shell example commands
+  - Python command template
 
 ### Modified files
 
 - `sau_cli.py`
-  - 新增 `xiaohongshu` parser / dispatch
-  - 改造抖音、快手 request dataclass 和参数模型
+  - Add the `xiaohongshu` parser / dispatch
+  - Rework the Douyin and Kuaishou request dataclasses and option model
 - `uploader/douyin_uploader/main.py`
-  - 给视频接入 `desc`
-  - 给图文接入 `title + note`
+  - Wire `desc` into video
+  - Wire `title + note` into image posts
 - `uploader/ks_uploader/main.py`
-  - 给视频接入 `desc`
-  - 给图文接入 `title + note`
+  - Wire `desc` into video
+  - Wire `title + note` into image posts
 - `uploader/xiaohongshu_uploader/main.py`
-  - 只补 CLI 接线所需的最小字段适配
+  - Only the minimal field adaptation needed for the CLI wiring
 - `README.md`
-  - 补小红书 CLI / skill，并统一三家参数说明
+  - Add the Xiaohongshu CLI / skill, and unify the option descriptions of the three platforms
 - `docs/CLI.md`
-  - 统一三家浏览器平台命令契约
+  - Unify the command contract of the three browser platforms
 - `docs/install.md`
-  - 补小红书 CLI 示例和统一参数说明
+  - Add the Xiaohongshu CLI example and the unified option description
 - `docs/update.md`
-  - 补小红书检查项与 skill 路径
+  - Add the Xiaohongshu check items and skill paths
 - `skills/douyin-upload/SKILL.md`
 - `skills/douyin-upload/references/cli-contract.md`
 - `skills/kuaishou-upload/SKILL.md`
@@ -56,15 +56,15 @@
 - `examples/get_xiaohongshu_cookie.py`
 - `examples/upload_video_to_xiaohongshu.py`
 
-## Task 1: 用测试锁定统一 CLI 契约
+## Task 1: Lock the unified CLI contract with tests
 
 **Files:**
 - Create: `tests/test_sau_browser_cli.py`
 - Reference: `sau_cli.py`
 
-- [ ] **Step 1: 写统一 CLI parser 测试**
+- [ ] **Step 1: Write the unified CLI parser tests**
 
-在 `tests/test_sau_browser_cli.py` 里覆盖最小命令契约：
+Cover the minimal command contract in `tests/test_sau_browser_cli.py`:
 
 ```python
 import asyncio
@@ -89,10 +89,10 @@ class BrowserCliParserTests(unittest.TestCase):
             "douyin", "upload-video",
             "--account", "creator",
             "--file", "demo.mp4",
-            "--title", "标题",
-            "--desc", "视频简介",
+            "--title", "title",
+            "--desc", "video description",
         ])
-        self.assertEqual(args.desc, "视频简介")
+        self.assertEqual(args.desc, "video description")
 
     def test_kuaishou_upload_note_accepts_title_and_note(self):
         parser = sau_cli.build_parser()
@@ -100,16 +100,16 @@ class BrowserCliParserTests(unittest.TestCase):
             "kuaishou", "upload-note",
             "--account", "creator",
             "--images", "1.png",
-            "--title", "图文标题",
-            "--note", "图文正文",
+            "--title", "image post title",
+            "--note", "image post body",
         ])
-        self.assertEqual(args.title, "图文标题")
-        self.assertEqual(args.note, "图文正文")
+        self.assertEqual(args.title, "image post title")
+        self.assertEqual(args.note, "image post body")
 ```
 
-- [ ] **Step 2: 写 dispatch 路由测试**
+- [ ] **Step 2: Write the dispatch routing tests**
 
-继续在 `tests/test_sau_browser_cli.py` 中补最小 dispatch 验证：
+Continue in `tests/test_sau_browser_cli.py` with the minimal dispatch checks:
 
 ```python
 class BrowserCliDispatchTests(unittest.TestCase):
@@ -125,9 +125,9 @@ class BrowserCliDispatchTests(unittest.TestCase):
             action="upload-note",
             account="creator",
             images=[Path("1.png")],
-            title="图文标题",
-            note="图文正文",
-            tags="测试,图文",
+            title="image post title",
+            note="image post body",
+            tags="test,image-post",
             schedule=0,
             debug=False,
             headless=True,
@@ -135,11 +135,11 @@ class BrowserCliDispatchTests(unittest.TestCase):
         with patch("sau_cli.upload_note", new=AsyncMock()) as mock_upload:
             asyncio.run(sau_cli.dispatch(args))
         request = mock_upload.await_args.args[0]
-        self.assertEqual(request.title, "图文标题")
-        self.assertEqual(request.note, "图文正文")
+        self.assertEqual(request.title, "image post title")
+        self.assertEqual(request.note, "image post body")
 ```
 
-- [ ] **Step 3: 先跑测试确认失败**
+- [ ] **Step 3: Run the tests first and confirm they fail**
 
 Run:
 
@@ -149,16 +149,16 @@ py -3 -m unittest tests.test_sau_browser_cli -v
 
 Expected:
 
-- 因为 `sau_cli.py` 还没有 `xiaohongshu` 分支和统一字段而失败
+- Fails because `sau_cli.py` does not have the `xiaohongshu` branch and the unified fields yet
 
-- [ ] **Step 4: 提交测试脚手架**
+- [ ] **Step 4: Commit the test scaffolding**
 
 ```powershell
 git add tests/test_sau_browser_cli.py
 git commit -m "test: define browser cli unification contract"
 ```
 
-## Task 2: 改 `sau_cli.py`，补齐统一参数与小红书路由
+## Task 2: Change `sau_cli.py` to add the unified options and Xiaohongshu routing
 
 **Files:**
 - Modify: `sau_cli.py`
@@ -166,9 +166,9 @@ git commit -m "test: define browser cli unification contract"
 - Reference: `uploader/douyin_uploader/main.py`
 - Reference: `uploader/ks_uploader/main.py`
 
-- [ ] **Step 1: 增加小红书 request dataclass**
+- [ ] **Step 1: Add the Xiaohongshu request dataclasses**
 
-在 `sau_cli.py` 中新增：
+Add to `sau_cli.py`:
 
 ```python
 @dataclass(slots=True)
@@ -198,9 +198,9 @@ class XiaohongshuNoteUploadRequest:
     headless: bool = True
 ```
 
-- [ ] **Step 2: 改造抖音、快手 request dataclass**
+- [ ] **Step 2: Rework the Douyin and Kuaishou request dataclasses**
 
-把字段统一到以下模型：
+Unify the fields to the following model:
 
 ```python
 class DouyinVideoUploadRequest:
@@ -220,29 +220,29 @@ class KuaishouNoteUploadRequest:
     note: str
 ```
 
-要求：
+Requirements:
 
-- 视频用 `description`
-- 图文用 `note`
-- 不再把图文 request 设计成只有历史 `note` 语义但没有 `title`
+- Video uses `description`
+- Image post uses `note`
+- Stop designing the image post request with only the legacy `note` semantics and no `title`
 
-- [ ] **Step 3: 改 parser**
+- [ ] **Step 3: Change the parser**
 
-在 `build_parser()` 里完成：
+In `build_parser()`, do the following:
 
-- `douyin upload-video` 增加 `--desc`
-- `kuaishou upload-video` 增加 `--desc`
-- `douyin upload-note` 改成 `--title --note`
-- `kuaishou upload-note` 改成 `--title --note`
-- 新增整套 `xiaohongshu`：
+- Add `--desc` to `douyin upload-video`
+- Add `--desc` to `kuaishou upload-video`
+- Change `douyin upload-note` to `--title --note`
+- Change `kuaishou upload-note` to `--title --note`
+- Add the whole `xiaohongshu` set:
   - `login`
   - `check`
   - `upload-video --title --desc --tags --thumbnail`
   - `upload-note --images --title --note --tags`
 
-- [ ] **Step 4: 补小红书账号操作函数**
+- [ ] **Step 4: Add the Xiaohongshu account functions**
 
-在 `sau_cli.py` 中新增：
+Add to `sau_cli.py`:
 
 ```python
 async def login_xiaohongshu_account(account_name: str, headless: bool = True) -> dict: ...
@@ -251,26 +251,26 @@ async def upload_xiaohongshu_video(request: XiaohongshuVideoUploadRequest) -> Pa
 async def upload_xiaohongshu_note(request: XiaohongshuNoteUploadRequest) -> Path: ...
 ```
 
-要求：
+Requirements:
 
-- 账号路径继续走 `resolve_account_file("xiaohongshu", account_name)`
-- 登录 / 检查分别复用 `xiaohongshu_setup` 与 `cookie_auth`
-- 上传前先做 `setup(handle=False)` 校验
+- The account path keeps going through `resolve_account_file("xiaohongshu", account_name)`
+- Login / check reuse `xiaohongshu_setup` and `cookie_auth` respectively
+- Validate with `setup(handle=False)` before uploading
 
-- [ ] **Step 5: 改 dispatch**
+- [ ] **Step 5: Change dispatch**
 
-要求：
+Requirements:
 
-- 三家浏览器平台都统一输出：
-  - `login` 成功时打印账号文件路径
-  - `check` 输出 `valid` / `invalid`
-  - `upload-video` 打印简洁摘要
-  - `upload-note` 打印图片数量摘要
-- request 构造统一映射：
-  - 视频：`title + description`
-  - 图文：`title + note`
+- All three browser platforms print the same output:
+  - On a successful `login`, print the account file path
+  - `check` prints `valid` / `invalid`
+  - `upload-video` prints a short summary
+  - `upload-note` prints a summary of the image count
+- Request construction is mapped uniformly:
+  - Video: `title + description`
+  - Image post: `title + note`
 
-- [ ] **Step 6: 跑 CLI 测试确认通过**
+- [ ] **Step 6: Run the CLI tests and confirm they pass**
 
 Run:
 
@@ -283,9 +283,9 @@ Expected:
 - `BrowserCliParserTests`
 - `BrowserCliDispatchTests`
 
-全部通过
+All pass
 
-- [ ] **Step 7: 跑最小 help 自检**
+- [ ] **Step 7: Run the minimal help self-check**
 
 Run:
 
@@ -298,18 +298,18 @@ py -3 sau_cli.py xiaohongshu upload-note --help
 
 Expected:
 
-- 小红书子命令存在
-- 图文命令展示 `--title`、`--note`
-- 视频命令展示 `--desc`
+- The Xiaohongshu subcommands exist
+- The image post command shows `--title` and `--note`
+- The video command shows `--desc`
 
-- [ ] **Step 8: 提交 CLI 主线**
+- [ ] **Step 8: Commit the CLI main line**
 
 ```powershell
 git add sau_cli.py tests/test_sau_browser_cli.py
 git commit -m "feat: unify browser cli contracts"
 ```
 
-## Task 3: 给 uploader 做最小字段接线
+## Task 3: Do the minimal field wiring for the uploaders
 
 **Files:**
 - Modify: `uploader/douyin_uploader/main.py`
@@ -317,76 +317,76 @@ git commit -m "feat: unify browser cli contracts"
 - Modify: `uploader/xiaohongshu_uploader/main.py`
 - Modify: `tests/test_xiaohongshu_uploader.py`
 
-- [ ] **Step 1: 给抖音视频接入 `desc`**
+- [ ] **Step 1: Wire `desc` into Douyin video**
 
-在 `DouYinVideo.__init__()` 中补 `desc` 参数和 `self.desc`，并把发布页填写逻辑改成：
+Add the `desc` parameter and `self.desc` to `DouYinVideo.__init__()`, and change the publish page fill-in logic to:
 
 ```python
 await self.fill_title_and_description(page, self.title, self.desc or self.title, self.tags)
 ```
 
-- [ ] **Step 2: 给抖音图文接入 `title + note`**
+- [ ] **Step 2: Wire `title + note` into Douyin image posts**
 
-在 `DouYinNote.__init__()` 中补 `title` 参数，保留 `note` 作为图文正文，发布页填写改成：
+Add the `title` parameter to `DouYinNote.__init__()`, keep `note` as the image post body, and change the publish page fill-in to:
 
 ```python
 await self.fill_title_and_description(page, self.title, self.note, self.tags)
 ```
 
-要求：
+Requirements:
 
-- `title` 必填
-- `note` 可选但建议非空；如果现有逻辑要求非空，就继续保留校验
+- `title` is required
+- `note` is optional but should preferably be non-empty. If the existing logic requires it to be non-empty, keep that validation
 
-- [ ] **Step 3: 给快手视频接入 `desc`**
+- [ ] **Step 3: Wire `desc` into Kuaishou video**
 
-在 `KSVideo.__init__()` 中补 `desc` 参数和 `self.desc`，填写“描述”区域时改成：
+Add the `desc` parameter and `self.desc` to `KSVideo.__init__()`, and when filling in the 描述 (Description) area, change it to:
 
 ```python
 await page.keyboard.type(self.desc or self.title)
 ```
 
-- [ ] **Step 4: 给快手图文接入 `title + note`**
+- [ ] **Step 4: Wire `title + note` into Kuaishou image posts**
 
-在 `KSNote.__init__()` 中补 `title` 参数与 `self.title`，保留 `self.note` 作为正文。
+Add the `title` parameter and `self.title` to `KSNote.__init__()`, and keep `self.note` as the body.
 
-要求：
+Requirements:
 
-- 图文上传校验里增加 `title` 必填
-- 如果页面当前只有正文输入区，没有独立标题区，仍然要在 CLI / request / 构造函数层保持 `title` 字段，以便后续平台对齐
+- Add `title` as required in the image post upload validation
+- If the page currently has only a body input area and no separate title area, still keep the `title` field at the CLI / request / constructor layers, so that later platform alignment is possible
 
-- [ ] **Step 5: 检查小红书 CLI 接线是否需要补充适配**
+- [ ] **Step 5: Check whether the Xiaohongshu CLI wiring needs extra adaptation**
 
-确认 `XiaoHongShuVideo` / `XiaoHongShuNote` 只需要以下映射即可：
+Confirm that `XiaoHongShuVideo` / `XiaoHongShuNote` only need the following mapping:
 
 ```python
 title=request.title
-desc=request.description  # 视频
-desc=request.note         # 图文
+desc=request.description  # video
+desc=request.note         # image post
 ```
 
-如果 `XiaoHongShuNote` 里还保留历史 `note` 兼容，不要删，只保持 CLI 层优先走 `title + note + tags`。
+If `XiaoHongShuNote` still keeps legacy `note` compatibility, do not delete it. Just keep the CLI layer preferring `title + note + tags`.
 
-- [ ] **Step 6: 补一条小红书映射测试**
+- [ ] **Step 6: Add a Xiaohongshu mapping test**
 
-在 `tests/test_xiaohongshu_uploader.py` 中增加最小断言：
+Add a minimal assertion to `tests/test_xiaohongshu_uploader.py`:
 
 ```python
 def test_note_title_defaults_do_not_override_explicit_title(self):
     app = xhs_main.XiaoHongShuNote(
         image_paths=["a.png"],
-        note="正文",
+        note="body",
         tags=[],
         publish_date=0,
         account_file="account.json",
-        title="显式标题",
-        desc="图文正文",
+        title="explicit title",
+        desc="image post body",
     )
-    self.assertEqual(app.title, "显式标题")
-    self.assertEqual(app.desc, "图文正文")
+    self.assertEqual(app.title, "explicit title")
+    self.assertEqual(app.desc, "image post body")
 ```
 
-- [ ] **Step 7: 跑 uploader 相关测试**
+- [ ] **Step 7: Run the uploader-related tests**
 
 Run:
 
@@ -396,16 +396,16 @@ py -3 -m unittest tests.test_xiaohongshu_uploader -v
 
 Expected:
 
-- 小红书 uploader 相关单测通过
+- The Xiaohongshu uploader unit tests pass
 
-- [ ] **Step 8: 提交 uploader 接线**
+- [ ] **Step 8: Commit the uploader wiring**
 
 ```powershell
 git add uploader/douyin_uploader/main.py uploader/ks_uploader/main.py uploader/xiaohongshu_uploader/main.py tests/test_xiaohongshu_uploader.py
 git commit -m "feat: align browser uploader metadata fields"
 ```
 
-## Task 4: 新增小红书 skill，并同步更新抖音、快手 skill
+## Task 4: Add the Xiaohongshu skill and update the Douyin and Kuaishou skills in step
 
 **Files:**
 - Create: `skills/xiaohongshu-upload/SKILL.md`
@@ -417,21 +417,21 @@ git commit -m "feat: align browser uploader metadata fields"
 - Modify: `skills/kuaishou-upload/SKILL.md`
 - Modify: `skills/kuaishou-upload/references/cli-contract.md`
 
-- [ ] **Step 1: 复制现有 skill 目录结构作为小红书骨架**
+- [ ] **Step 1: Copy the existing skill directory structure as the Xiaohongshu skeleton**
 
-要求：
+Requirements:
 
-- 风格对齐 `skills/douyin-upload/`
-- 默认优先走 `sau xiaohongshu ...`
-- 明确小红书支持：
+- Match the style of `skills/douyin-upload/`
+- Prefer `sau xiaohongshu ...` by default
+- State clearly that Xiaohongshu supports:
   - `login`
   - `check`
   - `upload-video`
   - `upload-note`
 
-- [ ] **Step 2: 写小红书 CLI 契约**
+- [ ] **Step 2: Write the Xiaohongshu CLI contract**
 
-至少写清：
+State at least:
 
 ```bash
 sau xiaohongshu login --account <account>
@@ -440,15 +440,15 @@ sau xiaohongshu upload-video --account <account> --file <video> --title "<title>
 sau xiaohongshu upload-note --account <account> --images <img...> --title "<title>" [--note "..."] [--tags ...]
 ```
 
-- [ ] **Step 3: 更新抖音、快手 skill 契约**
+- [ ] **Step 3: Update the Douyin and Kuaishou skill contracts**
 
-要求：
+Requirements:
 
-- 视频示例命令补 `--desc`
-- 图文示例命令改成 `--title --note`
-- 所有模板文件同步更新，不要只改文档不改脚本
+- Add `--desc` to the video example commands
+- Change the image post example commands to `--title --note`
+- Update all template files in step. Do not change only the docs and leave the scripts
 
-- [ ] **Step 4: 做 skill 文件级自检**
+- [ ] **Step 4: Do a file-level self-check of the skills**
 
 Run:
 
@@ -460,17 +460,17 @@ Get-Content skills\kuaishou-upload\references\cli-contract.md
 
 Expected:
 
-- 小红书 skill 目录完整
-- 抖音、快手 skill 契约都已经切到新参数模型
+- The Xiaohongshu skill directory is complete
+- The Douyin and Kuaishou skill contracts have both moved to the new option model
 
-- [ ] **Step 5: 提交 skill 变更**
+- [ ] **Step 5: Commit the skill changes**
 
 ```powershell
 git add skills/xiaohongshu-upload skills/douyin-upload skills/kuaishou-upload
 git commit -m "feat: add xiaohongshu skill and align browser skill contracts"
 ```
 
-## Task 5: 更新 examples 和 README / docs
+## Task 5: Update the examples and the README / docs
 
 **Files:**
 - Modify: `examples/get_xiaohongshu_cookie.py`
@@ -480,49 +480,49 @@ git commit -m "feat: add xiaohongshu skill and align browser skill contracts"
 - Modify: `docs/install.md`
 - Modify: `docs/update.md`
 
-- [ ] **Step 1: 改小红书 examples**
+- [ ] **Step 1: Change the Xiaohongshu examples**
 
-要求：
+Requirements:
 
-- `examples/get_xiaohongshu_cookie.py` 明确指向 `sau xiaohongshu login --account <account_name>` 这一主线
-- `examples/upload_video_to_xiaohongshu.py` 说明当前主线优先走 CLI
-- 如果继续保留 uploader 直连示例，注释里标明“调试入口 / 历史直连路径”
+- `examples/get_xiaohongshu_cookie.py` clearly points to the main line `sau xiaohongshu login --account <account_name>`
+- `examples/upload_video_to_xiaohongshu.py` says that the main line currently prefers the CLI
+- If the direct-uploader example is kept, mark it in a comment as a "debugging entry / legacy direct path"
 
-- [ ] **Step 2: 更新 README 平台表和快速开始**
+- [ ] **Step 2: Update the README platform table and quick start**
 
-README 至少要改这些位置：
+The README needs changes in at least these places:
 
-- 平台能力表里把小红书改成：
+- In the platform capability table, change Xiaohongshu to:
   - `CLI ✅`
   - `Skill ✅`
-- 快速开始里的浏览器平台命令改成统一契约
-- 抖音、快手图文示例改成：
+- Change the browser platform commands in the quick start to the unified contract
+- Change the Douyin and Kuaishou image post examples to:
 
 ```bash
-sau douyin upload-note --account <account_name> --images videos/1.png videos/2.png --title "图文标题" --note "图文正文"
-sau kuaishou upload-note --account <account_name> --images videos/1.png videos/2.png --title "图文标题" --note "图文正文"
-sau xiaohongshu upload-note --account <account_name> --images videos/1.png videos/2.png --title "图文标题" --note "图文正文"
+sau douyin upload-note --account <account_name> --images videos/1.png videos/2.png --title "Image post title" --note "Image post body"
+sau kuaishou upload-note --account <account_name> --images videos/1.png videos/2.png --title "Image post title" --note "Image post body"
+sau xiaohongshu upload-note --account <account_name> --images videos/1.png videos/2.png --title "Image post title" --note "Image post body"
 ```
 
-- [ ] **Step 3: 更新 `docs/CLI.md`**
+- [ ] **Step 3: Update `docs/CLI.md`**
 
-要求：
+Requirements:
 
-- 补 `xiaohongshu` 小节
-- 把三家浏览器平台整理成一致说明：
-  - 视频：`title + desc + tags`
-  - 图文：`title + note + tags`
-- 登录二维码说明补小红书
+- Add the `xiaohongshu` section
+- Write the three browser platforms up consistently:
+  - Video: `title + desc + tags`
+  - Image post: `title + note + tags`
+- Add Xiaohongshu to the login QR code notes
 
-- [ ] **Step 4: 更新 `docs/install.md` 和 `docs/update.md`**
+- [ ] **Step 4: Update `docs/install.md` and `docs/update.md`**
 
-要求：
+Requirements:
 
-- 安装文档里补 `sau xiaohongshu --help`
-- 更新文档里补小红书自检命令和 skill 路径
-- 文档统一写 `account_name`
+- Add `sau xiaohongshu --help` to the install doc
+- Add the Xiaohongshu self-check commands and skill paths to the update doc
+- Write `account_name` consistently in the docs
 
-- [ ] **Step 5: 做文档与示例核对**
+- [ ] **Step 5: Check the docs and examples**
 
 Run:
 
@@ -535,11 +535,11 @@ Get-Content docs\update.md | Select-String -Pattern "xiaohongshu" -Context 1,2
 
 Expected:
 
-- README、CLI、install、update 都出现小红书 CLI
-- 图文正文写成 `--note`
-- 视频描述写成 `--desc`
+- The README, CLI, install and update docs all show the Xiaohongshu CLI
+- The image post body is written as `--note`
+- The video description is written as `--desc`
 
-- [ ] **Step 6: 跑最终最小验证**
+- [ ] **Step 6: Run the final minimal verification**
 
 Run:
 
@@ -552,12 +552,12 @@ py -3 sau_cli.py xiaohongshu upload-note --help
 
 Expected:
 
-- 单测通过
-- 小红书 CLI 帮助存在
-- 视频命令显示 `--desc`
-- 图文命令显示 `--note`
+- The unit tests pass
+- The Xiaohongshu CLI help exists
+- The video command shows `--desc`
+- The image post command shows `--note`
 
-- [ ] **Step 7: 提交收尾**
+- [ ] **Step 7: Commit the wrap-up**
 
 ```powershell
 git add examples/get_xiaohongshu_cookie.py examples/upload_video_to_xiaohongshu.py README.md docs/CLI.md docs/install.md docs/update.md

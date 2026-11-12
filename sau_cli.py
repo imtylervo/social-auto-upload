@@ -1,4 +1,4 @@
-"""SAU 命令入口；平台参数与执行逻辑位于 sau_commands。"""
+"""SAU command entry point; platform arguments and execution logic live in sau_commands."""
 from __future__ import annotations
 
 import argparse
@@ -35,7 +35,7 @@ PLATFORMS = {
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """组装平台命令；每个平台维护自己的参数和执行函数。"""
+    """Assemble the platform commands; each platform maintains its own arguments and run function."""
     parser = argparse.ArgumentParser(prog="sau", description="CLI for social-auto-upload.")
     platform_parsers = parser.add_subparsers(dest="platform", required=True)
     for platform in PLATFORMS.values():
@@ -44,7 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 async def dispatch(args: argparse.Namespace) -> int:
-    """只按平台分发，不在入口重复平台的业务判断。"""
+    """Only dispatch by platform; do not repeat platform-specific checks in the entry point."""
     if args.platform not in PLATFORMS:
         raise RuntimeError(f"Unsupported platform: {args.platform}")
     return await PLATFORMS[args.platform].run(args)

@@ -1,4 +1,4 @@
-"""验证文件正文、样式边界、图文顺序及只提交一次的实际浏览器行为。"""
+"""Check file body text, style limits, text/image order, and the real browser behaviour of submitting only once."""
 import json
 import tempfile
 import unittest
@@ -126,10 +126,10 @@ class DayuArticleBrowserTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result["success"])
         self.assertTrue(result["public_article"]["content_checked"])
         self.assertEqual(result["public_article"]["image_count"], 1)
-        # 文字和图数相同，但图片被移到末尾，必须拒绝成功。
+        # Same text and same number of images, but the images were moved to the end: success must be refused.
         image = '<img src="https://image.uc.cn/test.png">'
         self.public_html = self.public_html.replace(image, "").replace('</div></div>', image + '</div></div>')
-        with self.assertRaisesRegex(RuntimeError, "顺序"):
+        with self.assertRaisesRegex(RuntimeError, "order of text, images or dividers"):
             await self.verify_article(document.manifest)
 
     @patch("uploader.dayu_uploader.publication.read_dayu_schedule", new_callable=AsyncMock, return_value={})
@@ -165,20 +165,20 @@ class DayuArticleBrowserTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["content_id"], "123")
             self.assertTrue(result["success"])
             self.assertTrue(json.loads(path.read_text(encoding="utf-8"))["success"])
-            # HTTP 成功但没有最终作品 ID，不能沿用草稿 ID 误报发表成功。
+            # HTTP succeeded but there is no final post ID: the draft ID must not be reused to report a successful publish.
             await page.unroute("https://mp.dayu.com/dashboard/submit-article")
             await page.route("https://mp.dayu.com/dashboard/submit-article", lambda route: route.fulfill(
                 json={"error": "submission rejected"}))
             await page.goto("https://mp.dayu.com/test-page")
             rejected = {"success": False}
-            with self.assertRaisesRegex(RuntimeError, "未返回 content_id"):
+            with self.assertRaisesRegex(RuntimeError, "returned no content_id"):
                 await submit_dayu_publication(page, rejected, path)
             self.assertFalse(rejected["success"])
             self.assertEqual(rejected["status"], "submission_unknown")
             await page.unroute("https://mp.dayu.com/dashboard/submit-article")
             await page.route("https://mp.dayu.com/dashboard/submit-article", lambda route: route.fulfill(
                 json={"data": {"content_id": "123"}}))
-            # 定时先核对服务端保存值，再确认一次；列表查询超时只保留原 ID，不得重试确认。
+            # Scheduled: check the value saved on the server first, then confirm once; if the list query times out keep only the original ID and never retry the confirm.
             for scenario in ("scheduled", "wrong_time", "query_timeout"):
                 with self.subTest(scenario=scenario):
                     await page.goto("https://mp.dayu.com/test-page")
@@ -221,9 +221,9 @@ class DayuArticleBrowserTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(await body.locator("[style]").count(), 0)
                 self.assertEqual(await body.locator("img").get_attribute("data-width"), "735")
                 self.assertTrue(rendered["expectations"]["text_colors"])
-                # 属性虽在，但被目标页 CSS 覆盖时必须拒绝，不能只检查 font[color] 存在。
+                # The attribute is present but overridden by the target page's CSS: this must be refused; checking that font[color] exists is not enough.
                 await page.add_style_tag(content="font { color: lime !important; }")
-                with self.assertRaisesRegex(RuntimeError, "主题"):
+                with self.assertRaisesRegex(RuntimeError, "expected theme"):
                     await check_dayu_article_content(body, document.manifest)
 
     async def test_transparent_colors_nested_emphasis_and_large_text(self):
@@ -251,7 +251,7 @@ class DayuArticleBrowserTests(unittest.IsolatedAsyncioTestCase):
             saved_bodies.append(parse_qs(route.request.post_data))
             await route.fulfill(json={"data": {"_id": "b" * 32,
                 "previewUrl": "https://mparticle.uc.cn/preview.html?wm_aid=" + "b" * 32}})
-        # context 级路由模拟服务器，page 级路由仍由生产代码实际改写本次保存请求。
+        # The context-level route simulates the server; the page-level route is still rewritten by production code for this save request.
         await page.context.route("https://mp.dayu.com/dashboard/save-draft", save)
         await page.route("https://mp.dayu.com/dashboard/submit-article", lambda route: route.fulfill(
             json={"data": {"content_id": "123"}}))
@@ -270,7 +270,7 @@ class DayuArticleBrowserTests(unittest.IsolatedAsyncioTestCase):
                 result = {"success": False, "manifest": document.manifest, "style_check": {"preview_checked": False}}
                 if not styled:
                     preview_html = '<div class="article-content"><p>主题正文</p></div>'
-                    with self.assertRaisesRegex(RuntimeError, "主题"):
+                    with self.assertRaisesRegex(RuntimeError, "expected theme"):
                         await submit_dayu_publication(page, result, path, rendered["html"])
                     self.assertEqual(await page.evaluate("window.confirms", isolated_context=False), 0)
                     self.assertEqual(result["status"], "preview_ready")

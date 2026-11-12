@@ -14,38 +14,38 @@ config.read(Path(BASE_DIR / "uploader" / "xhs_uploader" / "accounts.ini"))
 
 if __name__ == '__main__':
     filepath = Path(BASE_DIR) / "videos"
-    # 获取视频目录
+    # Get the video directory
     folder_path = Path(filepath)
-    # 获取文件夹中的所有文件
+    # Get all files in the folder
     files = list(folder_path.glob("*.mp4"))
     file_num = len(files)
 
     cookies = config['account1']['cookies']
     xhs_client = XhsClient(cookies, sign=sign_local, timeout=60)
     # auth cookie
-    # 注意：该校验cookie方式可能并没那么准确
+    # Note: this way of validating the cookie may not be very accurate
     try:
         xhs_client.get_video_first_frame_image_id("3214")
     except:
-        print("cookie 失效")
+        print("cookie expired")
         exit()
 
     publish_datetimes = generate_schedule_time_next_day(file_num, 1, daily_times=[16])
 
     for index, file in enumerate(files):
         title, tags = get_title_and_hashtags(str(file))
-        # 加入到标题 补充标题（xhs 可以填1000字不写白不写）
+        # Add to the title as a supplementary title (xhs allows up to 1000 characters, so there is no harm in filling it)
         tags_str = ' '.join(['#' + tag for tag in tags])
         hash_tags_str = ''
         hash_tags = []
 
-        # 打印视频文件名、标题和 hashtag
-        print(f"视频文件名：{file}")
-        print(f"标题：{title}")
-        print(f"Hashtag：{tags}")
+        # Print the video file name, title and hashtags
+        print(f"Video file name: {file}")
+        print(f"Title: {title}")
+        print(f"Hashtag: {tags}")
 
         topics = []
-        # 获取hashtag
+        # Get hashtags
         for i in tags[:3]:
             topic_official = xhs_client.get_suggest_topic(i)
             if topic_official:
@@ -64,5 +64,5 @@ if __name__ == '__main__':
                                             post_time=publish_datetimes[index].strftime("%Y-%m-%d %H:%M:%S"))
 
         beauty_print(note)
-        # 强制休眠30s，避免风控（必要）
+        # Force a 30s sleep to avoid risk control (required)
         sleep(30)

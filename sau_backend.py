@@ -17,21 +17,21 @@ from myUtils.postVideo import post_video_tencent, post_video_DouYin, post_video_
 active_queues = {}
 app = Flask(__name__)
 
-#允许所有来源跨域访问
+# Allow cross-origin requests from any origin
 CORS(app)
 
-# 限制上传文件大小为160MB
+# Limit uploaded file size to 160MB
 app.config['MAX_CONTENT_LENGTH'] = 160 * 1024 * 1024
 
-# 获取当前目录（假设 index.html 和 assets 在这里）
+# Get the current directory (assumes index.html and assets are here)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-# 处理所有静态资源请求（未来打包用）
+# Serve all static asset requests (for future packaging)
 @app.route('/assets/<filename>')
 def custom_static(filename):
     return send_from_directory(os.path.join(current_dir, 'assets'), filename)
 
-# 处理 favicon.ico 静态资源（未来打包用）
+# Serve the favicon.ico static asset (for future packaging)
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(current_dir, 'assets'), 'vite.svg')
@@ -40,7 +40,7 @@ def favicon():
 def vite_svg():
     return send_from_directory(os.path.join(current_dir, 'assets'), 'vite.svg')
 
-# （未来打包用）
+# (for future packaging)
 @app.route('/')
 def index():  # put application's code here
     return send_from_directory(current_dir, 'index.html')
@@ -61,7 +61,7 @@ def upload_file():
             "msg": "No selected file"
         }), 400
     try:
-        # 保存文件到指定位置
+        # Save the file to the target location
         uuid_v1 = uuid.uuid1()
         print(f"UUID v1: {uuid_v1}")
         safe_name = secure_filename(file.filename)
@@ -75,20 +75,20 @@ def upload_file():
 
 @app.route('/getFile', methods=['GET'])
 def get_file():
-    # 获取 filename 参数
+    # Get the filename parameter
     filename = request.args.get('filename')
 
     if not filename:
         return jsonify({"code": 400, "msg": "filename is required", "data": None}), 400
 
-    # 防止路径穿越攻击
+    # Prevent path traversal attacks
     if '..' in filename or filename.startswith('/'):
         return jsonify({"code": 400, "msg": "Invalid filename", "data": None}), 400
 
-    # 拼接完整路径
+    # Build the full path
     file_path = str(Path(BASE_DIR / "videoFile"))
 
-    # 返回文件
+    # Return the file
     return send_from_directory(file_path,filename)
 
 
@@ -109,7 +109,7 @@ def upload_save():
             "msg": "No selected file"
         }), 400
 
-    # 获取表单中的自定义文件名（可选）
+    # Get the custom file name from the form (optional)
     custom_filename = request.form.get('filename', None)
     if custom_filename:
         filename = secure_filename(custom_filename + "." + file.filename.split('.')[-1])
@@ -119,15 +119,15 @@ def upload_save():
         return jsonify({"code": 400, "data": None, "msg": "Invalid filename"}), 400
 
     try:
-        # 生成 UUID v1
+        # Generate a UUID v1
         uuid_v1 = uuid.uuid1()
         print(f"UUID v1: {uuid_v1}")
 
-        # 构造文件名和路径
+        # Build the file name and path
         final_filename = f"{uuid_v1}_{filename}"
         filepath = Path(BASE_DIR / "videoFile" / f"{uuid_v1}_{filename}")
 
-        # 保存文件
+        # Save the file
         file.save(filepath)
 
         with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
@@ -137,7 +137,7 @@ def upload_save():
             VALUES (?, ?, ?)
                                 ''', (filename, round(float(os.path.getsize(filepath)) / (1024 * 1024),2), final_filename))
             conn.commit()
-            print("✅ 上传文件已记录")
+            print("✅ Uploaded file recorded")
 
         return jsonify({
             "code": 200,
@@ -159,24 +159,24 @@ def upload_save():
 @app.route('/getFiles', methods=['GET'])
 def get_all_files():
     try:
-        # 使用 with 自动管理数据库连接
+        # Use with to manage the database connection automatically
         with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
-            conn.row_factory = sqlite3.Row  # 允许通过列名访问结果
+            conn.row_factory = sqlite3.Row  # Allow accessing results by column name
             cursor = conn.cursor()
 
-            # 查询所有记录
+            # Query all records
             cursor.execute("SELECT * FROM file_records")
             rows = cursor.fetchall()
 
-            # 将结果转为字典列表，并提取UUID
+            # Convert the results to a list of dicts and extract the UUID
             data = []
             for row in rows:
                 row_dict = dict(row)
-                # 从 file_path 中提取 UUID (文件名的第一部分，下划线前)
+                # Extract the UUID from file_path (the first part of the file name, before the underscore)
                 if row_dict.get('file_path'):
-                    file_path_parts = row_dict['file_path'].split('_', 1)  # 只分割第一个下划线
+                    file_path_parts = row_dict['file_path'].split('_', 1)  # Split on the first underscore only
                     if len(file_path_parts) > 0:
-                        row_dict['uuid'] = file_path_parts[0]  # UUID 部分
+                        row_dict['uuid'] = file_path_parts[0]  # UUID part
                     else:
                         row_dict['uuid'] = ''
                 else:
@@ -198,7 +198,7 @@ def get_all_files():
 
 @app.route("/getAccounts", methods=['GET'])
 def getAccounts():
-    """快速获取所有账号信息，不进行cookie验证"""
+    """Quickly get all account info, without cookie validation"""
     try:
         with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
             conn.row_factory = sqlite3.Row
@@ -208,7 +208,7 @@ def getAccounts():
             rows = cursor.fetchall()
             rows_list = [list(row) for row in rows]
 
-            print("\n📋 当前数据表内容（快速获取）：")
+            print("\n📋 Current table contents (quick fetch):")
             for row in rows:
                 print(row)
 
@@ -219,7 +219,7 @@ def getAccounts():
                     "data": rows_list
                 }), 200
     except Exception as e:
-        print(f"获取账号列表时出错: {str(e)}")
+        print(f"Error while getting the account list: {str(e)}")
         return jsonify({
             "code": 500,
             "msg": f"获取账号列表失败: {str(e)}",
@@ -235,7 +235,7 @@ async def getValidAccounts():
         SELECT * FROM user_info''')
         rows = cursor.fetchall()
         rows_list = [list(row) for row in rows]
-        print("\n📋 当前数据表内容：")
+        print("\n📋 Current table contents:")
         for row in rows:
             print(row)
         for row in rows_list:
@@ -248,7 +248,7 @@ async def getValidAccounts():
                 WHERE id = ?
                 ''', (0,row[0]))
                 conn.commit()
-                print("✅ 用户状态已更新")
+                print("✅ User status updated")
         for row in rows:
             print(row)
         return jsonify(
@@ -270,12 +270,12 @@ def delete_file():
         }), 400
 
     try:
-        # 获取数据库连接
+        # Get a database connection
         with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            # 查询要删除的记录
+            # Query the record to delete
             cursor.execute("SELECT * FROM file_records WHERE id = ?", (file_id,))
             record = cursor.fetchone()
 
@@ -288,19 +288,19 @@ def delete_file():
 
             record = dict(record)
 
-            # 获取文件路径并删除实际文件
+            # Get the file path and delete the actual file
             file_path = Path(BASE_DIR / "videoFile" / record['file_path'])
             if file_path.exists():
                 try:
-                    file_path.unlink()  # 删除文件
-                    print(f"✅ 实际文件已删除: {file_path}")
+                    file_path.unlink()  # Delete the file
+                    print(f"✅ Actual file deleted: {file_path}")
                 except Exception as e:
-                    print(f"⚠️ 删除实际文件失败: {e}")
-                    # 即使删除文件失败，也要继续删除数据库记录，避免数据不一致
+                    print(f"⚠️ Failed to delete the actual file: {e}")
+                    # Even if deleting the file fails, still delete the database record to avoid inconsistent data
             else:
-                print(f"⚠️ 实际文件不存在: {file_path}")
+                print(f"⚠️ Actual file does not exist: {file_path}")
 
-            # 删除数据库记录
+            # Delete the database record
             cursor.execute("DELETE FROM file_records WHERE id = ?", (file_id,))
             conn.commit()
 
@@ -334,12 +334,12 @@ def delete_account():
     account_id = int(account_id)
 
     try:
-        # 获取数据库连接
+        # Get a database connection
         with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            # 查询要删除的记录
+            # Query the record to delete
             cursor.execute("SELECT * FROM user_info WHERE id = ?", (account_id,))
             record = cursor.fetchone()
 
@@ -352,17 +352,17 @@ def delete_account():
 
             record = dict(record)
 
-            # 删除关联的cookie文件
+            # Delete the associated cookie file
             if record.get('filePath'):
                 cookie_file_path = Path(BASE_DIR / "cookiesFile" / record['filePath'])
                 if cookie_file_path.exists():
                     try:
                         cookie_file_path.unlink()
-                        print(f"✅ Cookie文件已删除: {cookie_file_path}")
+                        print(f"✅ Cookie file deleted: {cookie_file_path}")
                     except Exception as e:
-                        print(f"⚠️ 删除Cookie文件失败: {e}")
+                        print(f"⚠️ Failed to delete the cookie file: {e}")
 
-            # 删除数据库记录
+            # Delete the database record
             cursor.execute("DELETE FROM user_info WHERE id = ?", (account_id,))
             conn.commit()
 
@@ -380,40 +380,40 @@ def delete_account():
         }), 500
 
 
-# SSE 登录接口
+# SSE login endpoint
 @app.route('/login')
 def login():
-    # 1 小红书 2 视频号 3 抖音 4 快手
+    # 1 Xiaohongshu, 2 WeChat Channels, 3 Douyin, 4 Kuaishou
     type = request.args.get('type')
-    # 账号名
+    # Account name
     id = request.args.get('id')
 
-    # 模拟一个用于异步通信的队列
+    # A queue used for asynchronous communication
     status_queue = Queue()
     active_queues[id] = status_queue
 
     def on_close():
-        print(f"清理队列: {id}")
+        print(f"Cleaning up queue: {id}")
         del active_queues[id]
-    # 启动异步任务线程
+    # Start the async task thread
     thread = threading.Thread(target=run_async_function, args=(type,id,status_queue), daemon=True)
     thread.start()
     response = Response(sse_stream(status_queue,), mimetype='text/event-stream')
     response.headers['Cache-Control'] = 'no-cache'
-    response.headers['X-Accel-Buffering'] = 'no'  # 关键：禁用 Nginx 缓冲
+    response.headers['X-Accel-Buffering'] = 'no'  # Important: disable Nginx buffering
     response.headers['Content-Type'] = 'text/event-stream'
     response.headers['Connection'] = 'keep-alive'
     return response
 
 @app.route('/postVideo', methods=['POST'])
 def postVideo():
-    # 获取JSON数据
+    # Get the JSON data
     data = request.get_json()
 
     if not data:
         return jsonify({"code": 400, "msg": "请求数据不能为空", "data": None}), 400
 
-    # 从JSON数据中提取fileList和accountList
+    # Extract fileList and accountList from the JSON data
     file_list = data.get('fileList', [])
     account_list = data.get('accountList', [])
     type = data.get('type')
@@ -426,13 +426,13 @@ def postVideo():
     productLink = data.get('productLink', '')
     productTitle = data.get('productTitle', '')
     thumbnail_path = data.get('thumbnail', '')
-    is_draft = data.get('isDraft', False)  # 新增参数：是否保存为草稿
+    is_draft = data.get('isDraft', False)  # New parameter: whether to save as a draft
 
     videos_per_day = data.get('videosPerDay')
     daily_times = data.get('dailyTimes')
     start_days = data.get('startDays')
 
-    # 参数校验
+    # Validate the parameters
     if not file_list:
         return jsonify({"code": 400, "msg": "文件列表不能为空", "data": None}), 400
     if not account_list:
@@ -442,7 +442,7 @@ def postVideo():
     if not title:
         return jsonify({"code": 400, "msg": "标题不能为空", "data": None}), 400
 
-    # 打印获取到的数据（仅作为示例）
+    # Print the received data (example only)
     print("File List:", file_list)
     print("Account List:", account_list)
 
@@ -463,7 +463,7 @@ def postVideo():
             case _:
                 return jsonify({"code": 400, "msg": f"不支持的平台类型: {type}", "data": None}), 400
 
-        # 返回响应给客户端
+        # Return the response to the client
         return jsonify(
             {
                 "code": 200,
@@ -471,7 +471,7 @@ def postVideo():
                 "data": None
             }), 200
     except Exception as e:
-        print(f"发布视频时出错: {str(e)}")
+        print(f"Error while publishing the video: {str(e)}")
         return jsonify({
             "code": 500,
             "msg": f"发布失败: {str(e)}",
@@ -481,20 +481,20 @@ def postVideo():
 
 @app.route('/updateUserinfo', methods=['POST'])
 def updateUserinfo():
-    # 获取JSON数据
+    # Get the JSON data
     data = request.get_json()
 
-    # 从JSON数据中提取 type 和 userName
+    # Extract type and userName from the JSON data
     user_id = data.get('id')
     type = data.get('type')
     userName = data.get('userName')
     try:
-        # 获取数据库连接
+        # Get a database connection
         with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
 
-            # 更新数据库记录
+            # Update the database record
             cursor.execute('''
                            UPDATE user_info
                            SET type     = ?,
@@ -523,7 +523,7 @@ def postVideoBatch():
     if not isinstance(data_list, list):
         return jsonify({"code": 400, "msg": "Expected a JSON array", "data": None}), 400
     for data in data_list:
-        # 从JSON数据中提取fileList和accountList
+        # Extract fileList and accountList from the JSON data
         file_list = data.get('fileList', [])
         account_list = data.get('accountList', [])
         type = data.get('type')
@@ -540,7 +540,7 @@ def postVideoBatch():
         videos_per_day = data.get('videosPerDay')
         daily_times = data.get('dailyTimes')
         start_days = data.get('startDays')
-        # 打印获取到的数据（仅作为示例）
+        # Print the received data (example only)
         print("File List:", file_list)
         print("Account List:", account_list)
         match type:
@@ -556,7 +556,7 @@ def postVideoBatch():
             case 4:
                 post_video_ks(title, file_list, tags, account_list, category, enableTimer, videos_per_day, daily_times,
                           start_days)
-    # 返回响应给客户端
+    # Return the response to the client
     return jsonify(
         {
             "code": 200,
@@ -564,7 +564,7 @@ def postVideoBatch():
             "data": None
         }), 200
 
-# Cookie文件上传API
+# Cookie file upload API
 @app.route('/uploadCookie', methods=['POST'])
 def upload_cookie():
     try:
@@ -590,7 +590,7 @@ def upload_cookie():
                 "data": None
             }), 400
 
-        # 获取账号信息
+        # Get the account info
         account_id = request.form.get('id')
         platform = request.form.get('platform')
 
@@ -601,7 +601,7 @@ def upload_cookie():
                 "data": None
             }), 400
 
-        # 从数据库获取账号的文件路径
+        # Get the account's file path from the database
         with sqlite3.connect(Path(BASE_DIR / "db" / "database.db")) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
@@ -615,14 +615,14 @@ def upload_cookie():
                 "data": None
             }), 404
 
-        # 保存上传的Cookie文件到对应路径
+        # Save the uploaded cookie file to its path
         cookie_file_path = Path(BASE_DIR / "cookiesFile" / result['filePath'])
         cookie_file_path.parent.mkdir(parents=True, exist_ok=True)
 
         file.save(str(cookie_file_path))
 
-        # 更新数据库中的账号信息（可选，比如更新更新时间）
-        # 这里可以根据需要添加额外的处理逻辑
+        # Update the account info in the database (optional, e.g. the update time)
+        # Extra handling can be added here as needed
 
         return jsonify({
             "code": 200,
@@ -631,7 +631,7 @@ def upload_cookie():
         }), 200
 
     except Exception as e:
-        print(f"上传Cookie文件时出错: {str(e)}")
+        print(f"Error while uploading the cookie file: {str(e)}")
         return jsonify({
             "code": 500,
             "msg": f"上传Cookie文件失败: {str(e)}",
@@ -639,7 +639,7 @@ def upload_cookie():
         }), 500
 
 
-# Cookie文件下载API
+# Cookie file download API
 @app.route('/downloadCookie', methods=['GET'])
 def download_cookie():
     try:
@@ -651,7 +651,7 @@ def download_cookie():
                 "data": None
             }), 400
 
-        # 验证文件路径的安全性，防止路径遍历攻击
+        # Check that the file path is safe, to prevent path traversal attacks
         cookie_file_path = Path(BASE_DIR / "cookiesFile" / file_path).resolve()
         base_path = Path(BASE_DIR / "cookiesFile").resolve()
 
@@ -669,7 +669,7 @@ def download_cookie():
                 "data": None
             }), 404
 
-        # 返回文件
+        # Return the file
         return send_from_directory(
             directory=str(cookie_file_path.parent),
             path=cookie_file_path.name,
@@ -677,7 +677,7 @@ def download_cookie():
         )
 
     except Exception as e:
-        print(f"下载Cookie文件时出错: {str(e)}")
+        print(f"Error while downloading the cookie file: {str(e)}")
         return jsonify({
             "code": 500,
             "msg": f"下载Cookie文件失败: {str(e)}",
@@ -685,7 +685,7 @@ def download_cookie():
         }), 500
 
 
-# 包装函数：在线程中运行异步函数
+# Wrapper: run an async function in a thread
 def run_async_function(type,id,status_queue):
     match type:
         case '1':
@@ -709,14 +709,14 @@ def run_async_function(type,id,status_queue):
             loop.run_until_complete(get_ks_cookie(id,status_queue))
             loop.close()
 
-# SSE 流生成器函数
+# SSE stream generator function
 def sse_stream(status_queue):
     while True:
         if not status_queue.empty():
             msg = status_queue.get()
             yield f"data: {msg}\n\n"
         else:
-            # 避免 CPU 占满
+            # Avoid maxing out the CPU
             time.sleep(0.1)
 
 if __name__ == '__main__':

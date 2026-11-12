@@ -1,1 +1,1 @@
-"""命令按平台组织；各平台自行声明参数并执行命令。"""
+"""Commands are organized by platform; each platform declares its own arguments and runs its own commands."""

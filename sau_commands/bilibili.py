@@ -1,4 +1,4 @@
-"""bilibili 的命令参数与执行逻辑。"""
+"""Command arguments and execution logic for bilibili."""
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,7 +15,7 @@ from sau_commands.arguments import (
 
 
 def register(platform_parsers):
-    """声明本平台命令、参数及合法选项。"""
+    """Declare this platform's commands, arguments and allowed options."""
     schedule_help = SCHEDULE_FORMAT.replace("%", "%%")
     bilibili_parser = platform_parsers.add_parser("bilibili", help="Bilibili operations")
     bilibili_actions = bilibili_parser.add_subparsers(dest="action", required=True)
@@ -110,7 +110,7 @@ async def upload_bilibili_video(request: BilibiliVideoUploadRequest) -> Path:
 
 
 async def run(args):
-    """执行本平台命令；发布结果由平台实现核验。"""
+    """Run this platform's command; the platform implementation verifies the publish result."""
     if args.action == "login":
         result = await login_bilibili_account(args.account)
         if not result["success"]:

@@ -1,5 +1,5 @@
 import sau_commands.instagram
-"""Instagram 的业务响应、账号边界和实际 DOM/事件回归。"""
+"""Instagram: business responses, account boundaries and real DOM/event regressions."""
 import asyncio
 import contextlib
 import io
@@ -66,13 +66,13 @@ class InstagramContractTests(unittest.TestCase):
             uploader = AsyncMock(return_value={'status': 'published'})
             with patch.object(InstagramUploader, 'upload', uploader), contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(asyncio.run(sau_cli.dispatch(args)), 0)
-            # 单独核对请求到构造函数的传递，避免只测 parser 丢失后续接线。
+            # Check separately that the request reaches the constructor, so testing only the parser cannot hide broken wiring after it.
             request = sau_commands.instagram.InstagramUploadRequest('creator', 'caption', '', [], video_file=video, thumbnail=cover)
             with patch('sau_commands.instagram.InstagramUploader') as constructor:
                 constructor.return_value.upload = AsyncMock(return_value={})
                 asyncio.run(sau_commands.instagram.upload_instagram_content(request))
                 self.assertEqual(constructor.call_args.kwargs['thumbnail'], cover)
-            with self.assertRaisesRegex(ValueError, '仅用于视频'):
+            with self.assertRaisesRegex(ValueError, 'only applies to a video'):
                 InstagramUploader('unused', title='caption', image_files=[cover], thumbnail=cover)
             for invalid in (Path(folder)/'missing.png', Path(folder)/'cover.gif'):
                 if invalid.suffix == '.gif':
@@ -86,13 +86,13 @@ class InstagramContractTests(unittest.TestCase):
 
 class InstagramBrowserRegressionTests(unittest.TestCase):
     def test_optional_prompts_present_absent_and_failed_dismissal(self):
-        """按实际图标与按钮层级构造 DOM；覆盖延迟提示、缺席及点击未关闭的异常。"""
+        """Build the DOM from the real icon and button hierarchy; covers delayed prompts, absent prompts, and the error when a click does not close one."""
         async def scenario():
             async with async_playwright() as p:
                 browser = await p.chromium.launch(channel='chrome', headless=True)
                 page = await browser.new_page()
                 try:
-                    # 只保留真实页面的业务结构；不同语言按钮不参与生产定位。
+                    # Keep only the business structure of the real page; buttons in other languages play no part in production locating.
                     html = '''<script>
                       function notification(){document.body.insertAdjacentHTML('beforeend',
                         `<div role="dialog" id="notifications">
@@ -127,7 +127,7 @@ class InstagramBrowserRegressionTests(unittest.TestCase):
                     known = page.get_by_role('dialog').filter(has=page.locator('img[src*="reels_nux_icon"]'))
                     self.assertFalse(await _dismiss_optional_prompt(known, known.get_by_role('button')))
                     self.assertEqual(await page.get_by_role('dialog').count(), 1)
-                    # 已出现的已知提示若点击后未消失，必须保留异常，不能当作缺席吞掉。
+                    # If a known prompt has appeared and does not go away after the click, the error must be kept, not swallowed as "absent".
                     await page.set_content('<div role="dialog"><button>Cannot close</button></div>')
                     page.set_default_timeout(300)
                     from patchright.async_api import TimeoutError as BrowserTimeoutError
@@ -138,12 +138,12 @@ class InstagramBrowserRegressionTests(unittest.TestCase):
         asyncio.run(scenario())
 
     def test_cover_waits_for_actual_preview_and_rejects_wrong_image(self):
-        """真实 Chrome 中延迟替换预览，核对原图字节；错误预览必须停在编辑页。"""
+        """In real Chrome, replace the preview after a delay and check the original image bytes; a wrong preview must stop on the edit page."""
         async def scenario():
             import base64
             import struct
             import zlib
-            # 构造带正确 CRC 的 1×1 RGB PNG，避免依赖额外图像库或损坏的压缩样例。
+            # Build a 1×1 RGB PNG with a correct CRC, to avoid depending on an extra image library or a broken compressed sample.
             def chunk(kind, data):
                 return struct.pack('!I', len(data)) + kind + data + struct.pack('!I', zlib.crc32(kind + data))
             png = (b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('!2I5B', 1, 1, 8, 2, 0, 0, 0))
@@ -177,10 +177,10 @@ class InstagramBrowserRegressionTests(unittest.TestCase):
                         self.assertEqual(await page.locator('[role=heading]').inner_text(), 'compose')
                         self.assertEqual(await page.locator('#outside').evaluate('e=>e.files.length'), 0)
                         await page.reload()
-                        # 可解码但非指定文件的预览同样不能通过（本次改用不同有效 PNG 文件字节）。
+                        # A preview that decodes but is not the given file must not pass either (this time a different valid PNG's bytes).
                         cover.write_bytes(png + b'other image bytes')
                         await page.locator('body').evaluate("e=>e.dataset.wrong='true'")
-                        with self.assertRaisesRegex(RuntimeError, '预览与指定图片不匹配'):
+                        with self.assertRaisesRegex(RuntimeError, 'preview does not match the given image'):
                             await app._advance_media_editor(page)
                         self.assertEqual(await page.locator('[role=heading]').inner_text(), 'edit')
                 finally:
@@ -188,7 +188,7 @@ class InstagramBrowserRegressionTests(unittest.TestCase):
         asyncio.run(scenario())
 
     def test_delayed_login_foreign_owner_and_async_reel_creation(self):
-        """用真实 Chrome DOM 和网络事件验证：延迟页面不能误判、同配文不能跨作者、202 必须等正式作品。"""
+        """Verify with real Chrome DOM and network events: a delayed page must not be misjudged, the same caption must not cross authors, and a 202 must wait for the real post."""
         async def scenario():
             async with async_playwright() as p:
                 browser = await p.chromium.launch(channel='chrome', headless=True)
@@ -201,12 +201,12 @@ class InstagramBrowserRegressionTests(unittest.TestCase):
                     foreign = '''<meta property="og:url" content="https://www.instagram.com/p/ABC/">
                         <meta property="instapp:owner_user_id" content="99"><main>same caption</main>'''
                     await page.route('https://www.instagram.com/p/ABC/', lambda r: r.fulfill(body=foreign, content_type='text/html'))
-                    with self.assertRaisesRegex(RuntimeError, '作者'):
+                    with self.assertRaisesRegex(RuntimeError, 'author of the original post'):
                         await find_instagram_post(page, post_url='https://www.instagram.com/p/ABC/', expected_text='same caption', owner_id='42')
                     await page.unroute_all()
                     own = foreign.replace('content="99"', 'content="42"') + '<meta name="description" content="different caption"><meta property="al:ios:url" content="instagram://media?id=123">'
                     await page.route('https://www.instagram.com/p/ABC/', lambda r: r.fulfill(body=own, content_type='text/html'))
-                    with self.assertRaisesRegex(RuntimeError, '配文元数据'):
+                    with self.assertRaisesRegex(RuntimeError, 'caption metadata'):
                         await find_instagram_post(page, post_url='https://www.instagram.com/p/ABC/', expected_text='same caption', owner_id='42')
                     await page.unroute_all()
                     own = own.replace('different caption', 'same caption')

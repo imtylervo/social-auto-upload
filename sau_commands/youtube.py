@@ -1,4 +1,4 @@
-"""youtube 的命令参数与执行逻辑。"""
+"""Command arguments and execution logic for youtube."""
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,7 +15,7 @@ from sau_commands.arguments import (
 
 
 def register(platform_parsers):
-    """声明本平台命令、参数及合法选项。"""
+    """Declare this platform's commands, arguments and allowed options."""
     schedule_help = SCHEDULE_FORMAT.replace("%", "%%")
     youtube_parser = platform_parsers.add_parser("youtube", help="YouTube operations")
     youtube_actions = youtube_parser.add_subparsers(dest="action", required=True)
@@ -93,7 +93,7 @@ async def upload_youtube_video(request: YouTubeVideoUploadRequest) -> Path:
 
 
 async def run(args):
-    """执行本平台命令；发布结果由平台实现核验。"""
+    """Run this platform's command; the platform implementation verifies the publish result."""
     if args.action == "login":
         result = await login_youtube_account(args.account, headless=args.headless)
         if not result["success"]:

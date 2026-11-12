@@ -1,16 +1,16 @@
-# 登录
-# 建议由用户自己在本地真实终端里执行。
-# 如果终端二维码显示不完整，可以打开当前目录下的 qrcode.png 扫码。
+# Login
+# Best run by the user in a real local terminal.
+# If the terminal QR code is displayed incompletely, open qrcode.png in the current directory and scan it.
 $account = "account_a"
 # account_name is user-defined. One account_name maps to one account file.
 # You can prepare multiple account names and run them in parallel.
 
 sau bilibili login --account $account
 
-# 校验
+# Check
 sau bilibili check --account $account
 
-# 上传视频
+# Upload a video
 sau bilibili upload-video `
   --account $account `
   --file .\videos\demo.mp4 `

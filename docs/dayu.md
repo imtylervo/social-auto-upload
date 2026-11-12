@@ -1,117 +1,119 @@
-# 大鱼号视频发布使用说明
+# Dayu Video Publishing Guide
 
-当前支持登录、检查账号、立即或定时发布视频和查询发布结果；尚未接入 Web 界面。文章和富文本正文文件发布见 [大鱼号图文发布](./dayu-article.md)，Agent 使用见 [大鱼号 Skill](../skills/dayu-upload/SKILL.md)。
+Currently supported: login, account check, immediate or scheduled video publishing, and querying publish results. The Web UI is not connected yet. For publishing articles and rich-text body files, see [Dayu image post publishing](./dayu-article.md). For agent use, see the [Dayu Skill](../skills/dayu-upload/SKILL.md).
 
-## 首次使用
+## First use
 
-先按 [CLI 安装说明](./CLI.md) 安装项目，在项目根目录执行命令。Windows 中若找不到 `sau`，可使用 `.\.venv\Scripts\sau.exe`。
+First install the project by following the [CLI installation guide](./CLI.md), and run commands from the project root. On Windows, if `sau` is not found, you can use `.\.venv\Scripts\sau.exe`.
 
 ```powershell
-sau dayu login --account creator --expected-name "你的大鱼号名称"
+sau dayu login --account creator --expected-name "Your Dayu account name"
 sau dayu check --account creator
 ```
 
-登录时会打开 Chrome，请在网页中完成登录。`creator` 是你给这个账号起的本地名称，后续发布使用相同名称。检查返回 `valid` 表示账号可用；返回 `invalid` 时重新登录。
+Login opens Chrome. Complete the login in the web page. `creator` is the local name you give this account. Use the same name for later publishing. If the check returns `valid`, the account is usable. If it returns `invalid`, log in again.
 
-## 发布前准备
+## Before publishing
 
-| 必填内容 | 命令参数 | 要求 |
+| Required item | Command option | Requirement |
 | --- | --- | --- |
-| 账号 | `--account` | 已登录的本地账号名称 |
-| 视频文件 | `--file` | 本机文件路径；至少 5 秒，横屏建议 15 秒以上 |
-| 视频标题 | `--title` | 5–60 字，英文字符按半字计数 |
-| 视频分类 | `--category` | 从下列 43 个分类中选择一项 |
-| 视频封面 | `--thumbnail` | 与视频相关的图片路径，最大 5 MB；jpg、jpeg、png、gif 或 bmp |
-| 信息来源 | `--source` | 按实际内容选择下列来源之一 |
+| Account | `--account` | Name of a logged-in local account |
+| Video file | `--file` | Path to a local file. At least 5 seconds; for landscape video, 15 seconds or more is recommended |
+| Video title | `--title` | 5–60 characters; English characters count as half a character |
+| Video category | `--category` | Choose one of the 43 categories below |
+| Video cover | `--thumbnail` | Path to an image related to the video, at most 5 MB; jpg, jpeg, png, gif or bmp |
+| Information source | `--source` | Choose one of the sources below according to the real content |
 
-横屏视频最大 10 GB；竖屏视频最大 5 GB、时长不超过 30 分钟。支持的文件扩展名为：3gp、avi、flv、mp4、m3u8、mpg、asf、wmv、mkv、mov、ts、webm、mts，文件须能在本地正常解码。大小边界最终以平台检查为准。当前已完成横屏视频的真实发布验证；竖屏视频尚未完成真实发布验证。
+Landscape video can be at most 10 GB. Portrait video can be at most 5 GB and no longer than 30 minutes. Supported file extensions are: 3gp, avi, flv, mp4, m3u8, mpg, asf, wmv, mkv, mov, ts, webm, mts. The file must decode normally on the local machine. The platform's own check has the final say on size limits. Real publishing has been verified for landscape video. Real publishing of portrait video has not been verified yet.
 
-**视频分类**（2026-10-17 当前账号页面，共 43 项）：
+**Video categories** (from the page of the current account on 2026-10-17, 43 items). Pass the Chinese name exactly as shown; the English is only a gloss:
 
-其他、社会、国内、国际、体育、科技、娱乐、军事、财经、汽车、房产、时尚、健康、两性情感、游戏、动漫、旅游、美食、历史、奇闻、科学探索、星座、育儿、教育、美女、搞笑、演讲、萌娃、萌宠、音乐、语言类、记录短片、涨姿势、劲爆体育、幽默、综艺、电视剧、电影、纪录片、少儿、文化、三农、生活方式。
+其他 (Other), 社会 (Society), 国内 (Domestic), 国际 (International), 体育 (Sports), 科技 (Technology), 娱乐 (Entertainment), 军事 (Military), 财经 (Finance), 汽车 (Auto), 房产 (Real estate), 时尚 (Fashion), 健康 (Health), 两性情感 (Relationships), 游戏 (Games), 动漫 (Anime), 旅游 (Travel), 美食 (Food), 历史 (History), 奇闻 (Odd news), 科学探索 (Science exploration), 星座 (Horoscope), 育儿 (Parenting), 教育 (Education), 美女 (Beauty), 搞笑 (Funny), 演讲 (Speeches), 萌娃 (Cute kids), 萌宠 (Cute pets), 音乐 (Music), 语言类 (Language), 记录短片 (Short documentaries), 涨姿势 (Learn something new), 劲爆体育 (Hot sports), 幽默 (Humor), 综艺 (Variety shows), 电视剧 (TV series), 电影 (Movies), 纪录片 (Documentaries), 少儿 (Children), 文化 (Culture), 三农 (Agriculture and rural affairs), 生活方式 (Lifestyle).
 
-**信息来源**：
+**Information source** (pass the Chinese option text exactly as shown):
 
-| 页面选项 | 当前命令支持情况 |
+| Page option | Support in the current command |
 | --- | --- |
-| 无需标注 | 支持；已完成真实发布验证 |
-| AI生成 | 支持 |
-| 虚构演绎 | 支持填写；尚未单独进行真实发布验证 |
-| 营销信息 | 支持填写；尚未单独进行真实发布验证 |
-| 转载 | 支持填写；必须同时提供 `--source-url "https://原文地址"`，尚未单独进行真实发布验证 |
-| 个人观点 | 支持填写；尚未单独进行真实发布验证 |
-| 不适宜未成年人 | 支持填写；尚未单独进行真实发布验证 |
+| 无需标注 (No label needed) | Supported. Real publishing verified |
+| AI生成 (AI-generated) | Supported |
+| 虚构演绎 (Fictional dramatization) | Can be filled in. Real publishing not verified separately yet |
+| 营销信息 (Marketing information) | Can be filled in. Real publishing not verified separately yet |
+| 转载 (Repost) | Can be filled in. You must also provide `--source-url "https://original-article-url"`. Real publishing not verified separately yet |
+| 个人观点 (Personal opinion) | Can be filled in. Real publishing not verified separately yet |
+| 不适宜未成年人 (Not suitable for minors) | Can be filled in. Real publishing not verified separately yet |
 
-选择“转载”时，**原文链接为条件必填项**；其他来源无需提供原文链接。
+When you choose 转载 (Repost), the **original link is conditionally required**. Other sources do not need an original link.
 
-## 立即发布
+## Publish immediately
 
-下面的命令会实际发表视频；平台确认发表后即返回成功，不等待审核：
-
-```powershell
-sau dayu upload-video --account creator --file "D:\素材\视频.mp4" --title "这是大鱼号视频标题" --category "科技" --source "无需标注" --thumbnail "D:\素材\封面.jpg"
-```
-
-需要简介或标签时增加以下参数：
+The command below actually publishes the video. It returns success as soon as the platform confirms the publish, without waiting for review:
 
 ```powershell
---desc "视频简介，最多200字" --tags "标签一,标签二"
+# --category "科技" = Technology; --source "无需标注" = No label needed
+sau dayu upload-video --account creator --file "D:\assets\video.mp4" --title "This is a Dayu video title" --category "科技" --source "无需标注" --thumbnail "D:\assets\cover.jpg"
 ```
 
-标签用英文逗号分隔，每个标签最多 10 字。
-
-## 定时发布
-
-在发布命令中增加 `--schedule "YYYY-MM-DD HH:MM"`。时间固定按**北京时间（Asia/Shanghai，UTC+8）**解释，不受运行电脑时区影响；须在当前时间 2 小时后至 7 天内，分钟为 5 的倍数，例如 `10:30` 或 `10:35`。程序不会自动取整或改成立即发布。请留足上传和处理时间，填表时仍须处于允许范围内。
+If you need a description or tags, add these options:
 
 ```powershell
-sau dayu upload-video --account creator --file "D:\素材\视频.mp4" --title "这是大鱼号视频标题" --category "科技" --source "无需标注" --thumbnail "D:\素材\封面.jpg" --schedule "2027-01-01 10:30"
+--desc "Video description, at most 200 characters" --tags "tag one,tag two"
 ```
 
-示例日期需替换成实际范围内的时间。省略 `--schedule` 默认立即发布。平台确认原作品及定时时间后返回成功，表示**定时安排已提交**，不等待到点或审核。平台审核若延长，实际公开时间可能晚于预定时间。
+Separate tags with an English comma. Each tag can have at most 10 characters.
 
-## 页面还有哪些功能
+## Scheduled publishing
 
-下表按本次登录账号的短视频发布页整理。平台可能根据账号或素材展示不同功能。
+Add `--schedule "YYYY-MM-DD HH:MM"` to the publish command. The time is always interpreted as **Beijing time (Asia/Shanghai, UTC+8)**, regardless of the time zone of the computer running it. It must be between 2 hours and 7 days after the current time, and the minutes must be a multiple of 5, for example `10:30` or `10:35`. The program does not round the time or switch to immediate publishing. Leave enough time for upload and processing: the time must still be in the allowed range when the form is filled in.
 
-| 页面功能 | 是否必填 | 当前命令支持情况 |
+```powershell
+# --category "科技" = Technology; --source "无需标注" = No label needed
+sau dayu upload-video --account creator --file "D:\assets\video.mp4" --title "This is a Dayu video title" --category "科技" --source "无需标注" --thumbnail "D:\assets\cover.jpg" --schedule "2027-01-01 10:30"
+```
+
+Replace the example date with a time in the real allowed range. Without `--schedule`, the video is published immediately. The command returns success after the platform confirms the original work and the scheduled time. This means the **schedule has been submitted**. It does not wait for the time to arrive or for review. If review takes longer, the actual public time may be later than the scheduled time.
+
+## Other features on the page
+
+The table below follows the short-video publishing page of the account logged in this time. The platform may show different features depending on the account or the material.
+
+| Page feature | Required | Support in the current command |
 | --- | --- | --- |
-| 视频简介 | 选填 | 支持，使用 `--desc` |
-| 视频标签 | 选填 | 支持，使用 `--tags` |
-| 竖版封面 | 选填 | 尚未支持 |
-| 定时发布 | 选填 | 支持，使用 `--schedule`；北京时间 2 小时后至 7 天内，5 分钟一档 |
-| 从素材库选择视频 | 可选素材来源 | 尚未支持；当前命令使用本机文件 |
-| 网页预览 | 可选操作 | 发布过程中会进入预览并确认；尚未提供独立预览命令 |
-| 保存草稿、清空编辑内容 | 可选操作 | 尚未提供对应命令 |
+| Video description | Optional | Supported, with `--desc` |
+| Video tags | Optional | Supported, with `--tags` |
+| Portrait cover | Optional | Not supported yet |
+| Scheduled publishing | Optional | Supported, with `--schedule`; 2 hours to 7 days ahead in Beijing time, in 5-minute steps |
+| Choose a video from the asset library | Optional material source | Not supported yet. The current command uses local files |
+| Web preview | Optional action | The publishing process goes into the preview and confirms it. There is no separate preview command yet |
+| Save draft, clear edited content | Optional actions | No corresponding command yet |
 
-## 查看结果
+## Viewing the result
 
-命令提示“发表成功”后，表示平台已确认本次发表，结果中会返回作品 ID。不等待审核通过或公开播放，审核结果不影响本次发表操作的成功判定。
+When the command prints "发表成功" (published successfully), the platform has confirmed this publish, and the result returns the work ID. It does not wait for review to pass or for public playback. The review result does not affect whether this publish counts as successful.
 
-默认等待上传和处理最多 10 分钟，可增加 `--upload-timeout 1200`，单位为秒。
+By default it waits up to 10 minutes for upload and processing. You can add `--upload-timeout 1200`, in seconds.
 
-如果命令因断线等原因未能确认发表结果，请使用日志中给出的结果文件查询原作品，避免重复发表：
-
-```powershell
-sau dayu verify --account creator --result "cookies/dayu_results/本次结果文件.json"
-```
-
-该命令只读查询；找到已提交的原作品即成功，仍在审核中也会返回成功。定时作品还会核对结果文件中的预定时间，确认待发布安排即成功。若日志提示没有可查询的作品信息，请到大鱼号后台检查本次作品。
-
-需要额外检查公开视频播放时，可主动增加 `--public`，使用 `--timeout` 设置等待秒数：
+If the command could not confirm the publish result, for example because the connection dropped, use the result file named in the log to query the original work, to avoid publishing twice:
 
 ```powershell
-sau dayu verify --account creator --result "cookies/dayu_results/本次结果文件.json" --public --timeout 900
+sau dayu verify --account creator --result "cookies/dayu_results/this_result_file.json"
 ```
 
-公开检查可能需要等待审核。它是独立检查，不是发表命令的成功条件。
+This command is read-only. It succeeds when it finds the submitted original work, and it also succeeds if the work is still under review. For a scheduled work, it also checks the scheduled time in the result file, and succeeds once the pending schedule is confirmed. If the log says there is no work information to query, check this work in the Dayu backend.
 
-## 其他命令选项
+To additionally check public video playback, add `--public` and use `--timeout` to set the wait in seconds:
 
-| 选项 | 用途 |
+```powershell
+sau dayu verify --account creator --result "cookies/dayu_results/this_result_file.json" --public --timeout 900
+```
+
+The public check may have to wait for review. It is a separate check and not a success condition of the publish command.
+
+## Other command options
+
+| Option | Purpose |
 | --- | --- |
-| `--headed` | 显示发布时的 Chrome 窗口 |
-| `--prepare-only` | 上传素材、填写表单并保存本地截图，随后结束；用于检查发布前内容，未发表，也未保存网页草稿 |
-| `--debug` | 出错时保存页面截图，便于排查 |
+| `--headed` | Show the Chrome window used during publishing |
+| `--prepare-only` | Upload the material, fill in the form and save a local screenshot, then stop. Used to check the content before publishing. Nothing is published and no web draft is saved |
+| `--debug` | Save a page screenshot on error, to help troubleshooting |
 
-完整参数帮助：`sau dayu upload-video --help`。
+Full option help: `sau dayu upload-video --help`.

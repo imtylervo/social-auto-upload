@@ -170,10 +170,10 @@ douyin_uploader/*.json
 bilibili_uploader/*.json
 tk_uploader/*.json
 
-# 配置文件
+# Config file
 conf.py
 
-# 账号文件
+# Account files
 cookies
 
 # Frontend
@@ -186,12 +186,12 @@ package-lock.json
 # database
 db/database.db
 
-# 临时文件夹
+# Temporary folders
 cookiesFile
 uploadFile
 videoFile
 
 /uploader/bilibili_uploader/qrcode.png
 
-# 本地个人使用的浏览器自动化开发 Skill，不随开源仓库发布
+# Browser-automation development Skill for local personal use; not published with the open-source repo
 /skills/browser-automation-dev/

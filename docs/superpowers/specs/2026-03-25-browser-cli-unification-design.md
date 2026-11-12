@@ -1,103 +1,103 @@
-# 浏览器平台 CLI 统一与小红书 Skill 设计
+# Browser Platform CLI Unification and Xiaohongshu Skill Design
 
-日期：2026-03-25
+Date: 2026-03-25
 
-## 概要
+## Summary
 
-这份设计处理三个浏览器自动化平台的主线接口统一：
+This design unifies the main-line interface of three browser-automation platforms:
 
-- 抖音
-- 快手
-- 小红书
+- Douyin
+- Kuaishou
+- Xiaohongshu
 
-目标不是重写 uploader，也不是再抽一层复杂框架，而是把当前已经存在但不一致的 CLI、skill、文档、示例收口成一套统一契约。
+The goal is not to rewrite the uploaders or to add another complex framework layer. It is to bring the CLI, skills, docs and examples, which exist today but are inconsistent, into one unified contract.
 
-这次设计同时解决两个现实问题：
+This design solves two practical problems at once:
 
-1. 小红书虽然已经有可用的浏览器 uploader，但还没有接入 `sau` CLI，也没有对应 skill。
-2. 抖音、快手当前的 CLI 契约还带着历史字段，比如视频没有单独 `--desc`，而图文正文命名和视频描述语义混杂，不利于三家浏览器平台形成稳定统一的主线接口。
+1. Xiaohongshu already has a working browser uploader, but it is not connected to the `sau` CLI and has no skill.
+2. The current Douyin and Kuaishou CLI contracts still carry legacy fields. For example, videos have no separate `--desc`, and the naming of the image post body is mixed up with the video description semantics. This makes it hard for the three browser platforms to form one stable, unified main-line interface.
 
-这次统一后的对外入口固定为：
+After this unification, the external entries are fixed as:
 
 - `sau douyin ...`
 - `sau kuaishou ...`
 - `sau xiaohongshu ...`
 
-并让三家浏览器平台的视频、图文上传都遵循统一的主线参数模型：
+Video and image post uploads on all three browser platforms follow one unified main-line option model:
 
-- 视频：`title + desc + tags`
-- 图文：`title + note + tags`
+- Video: `title + desc + tags`
+- Image post: `title + note + tags`
 
-## 目标
+## Goals
 
-- 给小红书补齐主线 CLI：
+- Add the main-line CLI for Xiaohongshu:
   - `login`
   - `check`
   - `upload-video`
   - `upload-note`
-- 统一抖音、快手、小红书三家浏览器平台的 CLI 上传参数模型
-- 补齐小红书 skill、示例脚本、README、CLI 文档、安装/更新文档
-- 修正抖音、快手现有 CLI 契约里缺失的 `desc` 能力
-- 保持现有 uploader 主体逻辑不大改，不做过度封装
+- Unify the CLI upload option model of the three browser platforms: Douyin, Kuaishou and Xiaohongshu
+- Add the Xiaohongshu skill, example scripts, README, CLI docs and install/update docs
+- Fix the missing `desc` capability in the existing Douyin and Kuaishou CLI contracts
+- Keep the main logic of the existing uploaders mostly unchanged, and avoid over-wrapping
 
-## 非目标
+## Non-goals
 
-- 这次不重构 uploader 架构
-- 这次不改 Web 旧路径
-- 这次不改 Bilibili 的上传契约
-- 这次不做浏览器集成测试
-- 这次不保留公开的 `--note` 主契约
+- This change does not restructure the uploader architecture
+- This change does not touch the old Web path
+- This change does not alter the Bilibili upload contract
+- This change does not add browser integration tests
+- This change does not keep a public `--note` main contract
 
-## 当前项目基础
+## Current project foundation
 
-### 已有能力
+### Existing capabilities
 
-- 抖音、快手已经接入 `sau_cli.py`
-- Bilibili 已经接入 CLI 和 skill
-- 小红书已经具备：
-  - 登录
-  - cookie 校验
-  - 视频上传
-  - 图文上传
-  - 定时发布
-- 小红书 uploader 内部已经支持：
-  - 视频：`title + desc + tags`
-  - 图文：`title + desc + tags`
-  - 图文里的 `desc` 可选
+- Douyin and Kuaishou are already connected to `sau_cli.py`
+- Bilibili is already connected to the CLI and has a skill
+- Xiaohongshu already has:
+  - Login
+  - Cookie validation
+  - Video upload
+  - Image post upload
+  - Scheduled publishing
+- The Xiaohongshu uploader already supports internally:
+  - Video: `title + desc + tags`
+  - Image post: `title + desc + tags`
+  - `desc` in an image post is optional
 
-### 当前不一致点
+### Current inconsistencies
 
-- 抖音视频 CLI：`--title`、`--tags`，没有 `--desc`
-- 快手视频 CLI：`--title`、`--tags`，没有 `--desc`
-- 抖音图文 CLI：`--note`、`--tags`
-- 快手图文 CLI：`--note`、`--tags`
-- 小红书还没有 CLI/skill 接口
+- Douyin video CLI: `--title`, `--tags`, no `--desc`
+- Kuaishou video CLI: `--title`, `--tags`, no `--desc`
+- Douyin image post CLI: `--note`, `--tags`
+- Kuaishou image post CLI: `--note`, `--tags`
+- Xiaohongshu has no CLI/skill interface yet
 
-也就是说，当前三家浏览器平台的主线能力并不统一，尤其是：
+In other words, the main-line capabilities of the three browser platforms are not unified today. In particular:
 
-- 视频描述没有统一暴露为 `desc`
-- 图文正文是否应该沿用 `note` 语义没有统一
+- The video description is not exposed uniformly as `desc`
+- It is not settled whether the image post body should keep the `note` semantics
 
-## 统一后的 CLI 设计
+## Unified CLI design
 
-### 支持的平台
+### Supported platforms
 
 - `douyin`
 - `kuaishou`
 - `xiaohongshu`
 
-### 支持的动作
+### Supported actions
 
-每个平台统一支持：
+Every platform supports:
 
 - `login`
 - `check`
 - `upload-video`
 - `upload-note`
 
-### 统一后的上传参数模型
+### Unified upload option model
 
-#### 视频上传
+#### Video upload
 
 ```bash
 sau <platform> upload-video \
@@ -107,28 +107,28 @@ sau <platform> upload-video \
   [--desc "<description>"] \
   [--tags tag1,tag2] \
   [--schedule "YYYY-MM-DD HH:MM"] \
-  [平台特有参数...]
+  [platform-specific options...]
 ```
 
-统一规则：
+Unified rules:
 
-- `--title` 必填
-- `--desc` 选填
-- `--tags` 选填
-- `--schedule` 选填
+- `--title` required
+- `--desc` optional
+- `--tags` optional
+- `--schedule` optional
 
-平台特有参数：
+Platform-specific options:
 
-- 抖音：
+- Douyin:
   - `--thumbnail`
   - `--product-link`
   - `--product-title`
-- 快手：
+- Kuaishou:
   - `--thumbnail`
-- 小红书：
+- Xiaohongshu:
   - `--thumbnail`
 
-#### 图文上传
+#### Image post upload
 
 ```bash
 sau <platform> upload-note \
@@ -140,29 +140,29 @@ sau <platform> upload-note \
   [--schedule "YYYY-MM-DD HH:MM"]
 ```
 
-统一规则：
+Unified rules:
 
-- `--images` 必填
-- `--title` 必填
-- `--note` 选填
-- `--tags` 选填
-- `--schedule` 选填
+- `--images` required
+- `--title` required
+- `--note` optional
+- `--tags` optional
+- `--schedule` optional
 
-明确决定：
+Explicit decisions:
 
-- 图文主线正文统一叫 `note`
-- 视频主线描述统一叫 `desc`
-- 文档、skill、示例统一使用：
-  - 视频：`--title + --desc + --tags`
-  - 图文：`--title + --note + --tags`
+- The main-line body of an image post is called `note`
+- The main-line description of a video is called `desc`
+- Docs, skills and examples use:
+  - Video: `--title + --desc + --tags`
+  - Image post: `--title + --note + --tags`
 
-## 数据模型设计
+## Data model design
 
-为了让 CLI 层和 uploader 层映射清晰，每个平台都保持各自的 request dataclass，但字段命名统一。
+To keep the mapping between the CLI layer and the uploader layer clear, each platform keeps its own request dataclass, but the field names are unified.
 
-### 视频请求对象
+### Video request object
 
-统一字段：
+Unified fields:
 
 - `account_name`
 - `video_file`
@@ -174,20 +174,20 @@ sau <platform> upload-note \
 - `debug`
 - `headless`
 
-平台特有字段保留：
+Platform-specific fields are kept:
 
-- 抖音：
+- Douyin:
   - `thumbnail_file`
   - `product_link`
   - `product_title`
-- 快手：
+- Kuaishou:
   - `thumbnail_file`
-- 小红书：
+- Xiaohongshu:
   - `thumbnail_file`
 
-### 图文请求对象
+### Image post request object
 
-统一字段：
+Unified fields:
 
 - `account_name`
 - `image_files`
@@ -199,35 +199,35 @@ sau <platform> upload-note \
 - `debug`
 - `headless`
 
-这里明确保留 `note`，因为它更符合图文正文语义，不应强行复用视频里的 `description / desc` 命名。
+`note` is deliberately kept here, because it fits the image post body better and should not be forced to reuse the `description / desc` naming of videos.
 
-## 与现有 uploader 的映射
+## Mapping to the existing uploaders
 
-### 抖音
+### Douyin
 
-- 视频上传继续复用 `DouYinVideo`
-- 给抖音视频补齐 `desc` 输入映射
-- 图文上传改为显式接收 `title + note + tags`
-- `note` 在 CLI 层映射到抖音图文正文输入区
+- Video upload keeps reusing `DouYinVideo`
+- Add the `desc` input mapping to Douyin video
+- Image post upload now takes `title + note + tags` explicitly
+- At the CLI layer, `note` is mapped to the Douyin image post body input area
 
-### 快手
+### Kuaishou
 
-- 视频上传继续复用 `KSVideo`
-- 给快手视频补齐 `desc` 输入映射
-- 图文上传改为显式接收 `title + note + tags`
+- Video upload keeps reusing `KSVideo`
+- Add the `desc` input mapping to Kuaishou video
+- Image post upload now takes `title + note + tags` explicitly
 
-### 小红书
+### Xiaohongshu
 
-- 登录、校验直接接 `xiaohongshu_setup` / `cookie_auth`
-- 视频上传复用 `XiaoHongShuVideo`
-- 图文上传复用 `XiaoHongShuNote`
-- 因为小红书 uploader 已经支持 `title + desc + tags`，CLI 层把 `note` 稳定映射到图文正文即可
+- Login and validation connect directly to `xiaohongshu_setup` / `cookie_auth`
+- Video upload reuses `XiaoHongShuVideo`
+- Image post upload reuses `XiaoHongShuNote`
+- Because the Xiaohongshu uploader already supports `title + desc + tags`, the CLI layer only needs to map `note` to the image post body consistently
 
-## 兼容与迁移策略
+## Compatibility and migration strategy
 
-这次采用“直接统一，不保留旧的模糊公开契约”的策略。
+This change takes the approach of "unify directly, and do not keep the old vague public contract".
 
-具体表现：
+Concretely:
 
 - `README.md`
 - `docs/CLI.md`
@@ -235,129 +235,129 @@ sau <platform> upload-note \
 - `docs/update.md`
 - `skills/douyin-upload/...`
 - `skills/kuaishou-upload/...`
-- 新增 `skills/xiaohongshu-upload/...`
+- The new `skills/xiaohongshu-upload/...`
 
-都会在同一轮里切换到新契约，避免出现：
+all switch to the new contract in the same round, to avoid:
 
-- 一部分文档把图文正文写成 `--note`
-- 一部分文档把图文正文写成 `--desc`
+- Some docs writing the image post body as `--note`
+- Some docs writing the image post body as `--desc`
 
-这样做的代价是旧示例命令会失效，但换来的是主线契约彻底统一：
+The cost is that old example commands stop working, but in return the main-line contract is fully unified:
 
-- 视频永远是 `desc`
-- 图文永远是 `note`
+- Video is always `desc`
+- Image post is always `note`
 
-## Skill 设计
+## Skill design
 
-新增：
+New:
 
 - `skills/xiaohongshu-upload/SKILL.md`
 - `skills/xiaohongshu-upload/references/cli-contract.md`
 - `skills/xiaohongshu-upload/references/runtime-requirements.md`
 - `skills/xiaohongshu-upload/references/troubleshooting.md`
 
-并同步更新：
+Also updated in step:
 
 - `skills/douyin-upload/SKILL.md`
 - `skills/douyin-upload/references/cli-contract.md`
 - `skills/kuaishou-upload/SKILL.md`
 - `skills/kuaishou-upload/references/cli-contract.md`
 
-skill 原则继续保持：
+The skill principles stay the same:
 
-- 优先走 `sau`
-- agent 不要先读 uploader 源码
-- CLI 失败时再看 troubleshooting
-- 登录二维码图片优先直接展示给用户扫码
+- Prefer `sau`
+- The agent should not read the uploader source first
+- Look at troubleshooting only when the CLI fails
+- Show the login QR code image directly to the user to scan
 
-## 文档设计
+## Documentation design
 
-至少更新：
+Update at least:
 
 - `README.md`
 - `docs/CLI.md`
 - `docs/install.md`
 - `docs/update.md`
 
-统一后的表达口径：
+The unified wording:
 
-- 三家浏览器平台都已经接入 CLI
-- 三家浏览器平台都已经接入 skill
-- 视频上传统一字段：
+- All three browser platforms are connected to the CLI
+- All three browser platforms are connected to skills
+- Unified fields for video upload:
   - `title`
   - `desc`
   - `tags`
-- 图文上传统一字段：
+- Unified fields for image post upload:
   - `title`
   - `note`
   - `tags`
-- `account_name` 是用户自定义账号名，不是固定只能叫 `creator`
-- 一个 `account_name` 对应一个账号文件，可多账号隔离并发
+- `account_name` is a user-defined account name. It is not fixed to `creator`
+- One `account_name` maps to one account file, so multiple accounts can be isolated and run concurrently
 
-## Example 设计
+## Example design
 
-examples 保留两类路径：
+The examples keep two kinds of paths:
 
-1. CLI 主线示例
-2. 历史直连 uploader 示例
+1. CLI main-line examples
+2. Legacy direct-uploader examples
 
-小红书需要补到和其他平台同等级的主线表达里：
+Xiaohongshu needs to be brought to the same level of main-line presentation as the other platforms:
 
 - `examples/get_xiaohongshu_cookie.py`
 - `examples/upload_video_to_xiaohongshu.py`
-- 如有必要，补一份更贴近 CLI 契约的调用示例
+- If necessary, add a call example closer to the CLI contract
 
-README 和 docs 中要明确说明：
+The README and docs must state clearly:
 
-- 推荐优先使用 `sau xiaohongshu ...`
-- 历史直连 uploader 示例只是调试入口
+- Prefer `sau xiaohongshu ...`
+- The legacy direct-uploader examples are only a debugging entry
 
-## 错误处理
+## Error handling
 
-### 参数级错误
+### Option-level errors
 
-由 CLI parser 负责：
+Handled by the CLI parser:
 
-- 文件不存在
-- 时间格式非法
-- 缺少 `--title`
-- 缺少 `--images`
+- File does not exist
+- Invalid time format
+- Missing `--title`
+- Missing `--images`
 
-### 业务级错误
+### Business-level errors
 
-由 uploader 和现有校验负责：
+Handled by the uploaders and existing validation:
 
-- cookie 不存在
-- cookie 已失效
-- 上传失败
-- 页面结构异常
+- Cookie does not exist
+- Cookie has expired
+- Upload failed
+- Unexpected page structure
 
-### 二维码口径
+### QR code wording
 
-三家浏览器平台统一保留这条说明：
+All three browser platforms keep this statement:
 
-- 如果登录流程生成了本地二维码图片，agent 应优先直接展示/发送图片给用户扫码，而不是只返回路径
+- If the login flow generates a local QR code image, the agent should show or send the image to the user to scan, instead of only returning the path
 
-## 测试策略
+## Test strategy
 
-这次只做最小但有价值的 CLI 级验证，不做浏览器集成测试。
+This change only does minimal but valuable CLI-level verification, with no browser integration tests.
 
-至少补这些测试：
+Add at least these tests:
 
-- parser 能识别 `xiaohongshu`
-- 三个平台新契约能正确解析：
+- The parser recognizes `xiaohongshu`
+- The new contract parses correctly on the three platforms:
   - `upload-video --title --desc --tags`
   - `upload-note --images --title --note --tags`
-- dispatch 能正确把参数转成对应 request
-- 小红书 `login/check/upload-video/upload-note` 分支能被正确路由
+- Dispatch converts the options into the matching request correctly
+- The Xiaohongshu `login/check/upload-video/upload-note` branches are routed correctly
 
-保留现有：
+Keep the existing:
 
 - `tests/test_xiaohongshu_uploader.py`
 
-## 文件影响范围
+## Files affected
 
-### 必改
+### Must change
 
 - `sau_cli.py`
 - `README.md`
@@ -365,39 +365,39 @@ README 和 docs 中要明确说明：
 - `docs/install.md`
 - `docs/update.md`
 
-### 新增
+### New
 
-- `skills/xiaohongshu-upload/` 全套文件
-- 对应 CLI 单测文件
+- The full set of files under `skills/xiaohongshu-upload/`
+- The matching CLI unit test file
 
-### 同步修改
+### Changed in step
 
 - `skills/douyin-upload/...`
 - `skills/kuaishou-upload/...`
 - `examples/get_xiaohongshu_cookie.py`
 - `examples/upload_video_to_xiaohongshu.py`
 
-## 推荐实现顺序
+## Recommended implementation order
 
-1. 先改 `sau_cli.py` 和 request 模型
-2. 接上小红书 CLI 路由
-3. 给抖音、快手补 `desc` / 图文新字段映射
-4. 补 CLI 单测
-5. 新增小红书 skill
-6. 更新抖音、快手 skill 契约
-7. 更新 README / CLI / install / update 文档
-8. 更新 examples
+1. Change `sau_cli.py` and the request models first
+2. Wire up the Xiaohongshu CLI routing
+3. Add the `desc` / new image post field mapping for Douyin and Kuaishou
+4. Add the CLI unit tests
+5. Add the Xiaohongshu skill
+6. Update the Douyin and Kuaishou skill contracts
+7. Update the README / CLI / install / update docs
+8. Update the examples
 
-## 最终结论
+## Final conclusions
 
-- 三家浏览器平台统一成同一套 CLI 动作：
+- The three browser platforms are unified on one set of CLI actions:
   - `login`
   - `check`
   - `upload-video`
   - `upload-note`
-- 三家浏览器平台统一成同一套主线元数据模型：
-  - 视频：`title + desc + tags`
-  - 图文：`title + note + tags`
-- 小红书补齐 CLI 与 skill
-- 抖音、快手补齐 `desc` 能力，并统一图文正文字段为 `note`
-- 实现保持轻量，不做过度封装
+- The three browser platforms are unified on one main-line metadata model:
+  - Video: `title + desc + tags`
+  - Image post: `title + note + tags`
+- Xiaohongshu gets its CLI and skill
+- Douyin and Kuaishou get the `desc` capability, and the image post body field is unified as `note`
+- The implementation stays lightweight, with no over-wrapping

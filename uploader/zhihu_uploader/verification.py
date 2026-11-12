@@ -1,4 +1,4 @@
-"""知乎作品提交后的只读核验。"""
+"""Read-only verification of a Zhihu post after submission."""
 from __future__ import annotations
 
 import json
@@ -13,23 +13,23 @@ from uploader.zhihu_uploader.session import load_zhihu_identity, read_zhihu_iden
 
 
 async def verify_zhihu_result(account_file, result_file, headless=False) -> dict:
-    """只读打开结果文件保存的作品 URL；缺 URL 时要求先查询创作中心原作品。"""
+    """Open the post URL saved in the result file, read-only; without a URL, ask for the original post to be looked up in the creator center first."""
     account_file = Path(account_file).resolve()
     result_file = Path(result_file).resolve()
     result = json.loads(result_file.read_text(encoding="utf-8"))
     expected = load_zhihu_identity(account_file)
     if result.get("identity") != expected:
-        raise ValueError("结果文件与当前知乎账号绑定不一致")
+        raise ValueError("The result file does not match the current Zhihu account binding")
     url = result.get("url")
     if not url:
         raise ValueError(
-            "结果文件没有知乎作品 URL；请在创作中心的内容管理中按标题和提交时间核对原作品，勿重新上传"
+            "The result file has no Zhihu post URL; find the original post by title and submission time under content management in the creator center, do not upload again"
         )
     parsed = urlsplit(url)
     if parsed.scheme != "https" or parsed.hostname not in {"www.zhihu.com", "zhuanlan.zhihu.com"}:
-        raise ValueError("结果文件中的知乎作品 URL 不受支持")
+        raise ValueError("The Zhihu post URL in the result file is not supported")
     if not re.search(r"/(?:p|pin|zvideo|video)/\d+/?$", parsed.path):
-        raise ValueError("结果文件 URL 未包含知乎文章或视频作品 ID")
+        raise ValueError("The result file URL contains no Zhihu article or video post ID")
 
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(
@@ -40,13 +40,13 @@ async def verify_zhihu_result(account_file, result_file, headless=False) -> dict
             page = await context.new_page()
             response = await page.goto(url, wait_until="domcontentloaded", timeout=45000)
             if response is not None and response.status >= 400:
-                raise RuntimeError(f"知乎原作品 URL 访问失败，HTTP {response.status}")
+                raise RuntimeError(f"Failed to open the original Zhihu post URL, HTTP {response.status}")
             if await read_zhihu_identity(page) != expected:
-                raise RuntimeError("知乎核验页头与本地账号绑定不一致")
+                raise RuntimeError("The Zhihu header during verification does not match the local account binding")
             title = result.get("title")
             if not title:
-                raise ValueError("结果文件缺少标题，无法核对原作品")
-            # 新版视频详情把标题与简介放在同一正文区，标题后还带分隔符。
+                raise ValueError("The result file has no title; cannot check the original post")
+            # The new video detail page puts title and description in the same body area, with a separator after the title.
             await expect(page.locator("main")).to_contain_text(title, timeout=30000)
             result.update(success=True, status="published", verified=True)
             result_file.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")

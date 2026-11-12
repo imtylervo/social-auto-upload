@@ -1,4 +1,4 @@
-"""facebook-page 的命令参数与执行逻辑。"""
+"""Command arguments and execution logic for facebook-page."""
 from __future__ import annotations
 import json
 from dataclasses import dataclass
@@ -23,7 +23,7 @@ from sau_commands.arguments import (
 
 
 def register(platform_parsers):
-    """声明本平台命令、参数及合法选项。"""
+    """Declare this platform's commands, arguments and allowed options."""
     schedule_help = SCHEDULE_FORMAT.replace("%", "%%")
     for meta_platform, meta_help in (
         ("facebook-page", "Facebook Page Business Suite operations"),
@@ -32,21 +32,21 @@ def register(platform_parsers):
         meta_actions = meta_parser.add_subparsers(dest="action", required=True)
         if meta_platform == "facebook-page":
             for action in ("verify", "delete"):
-                post_parser = meta_actions.add_parser(action, help="按编号核对原作品" if action == "verify" else "核对编号后删除：定时作品永久删除，已发布作品移至垃圾箱")
+                post_parser = meta_actions.add_parser(action, help="Check the original post by ID" if action == "verify" else "Check the ID, then delete: scheduled posts are deleted permanently, published posts are moved to the trash")
                 post_parser.add_argument("--account", required=True)
                 post_parser.add_argument("--page-id", required=True)
                 post_parser.add_argument("--page", required=True)
                 post_parser.add_argument("--content-id", required=True)
                 post_parser.add_argument("--expected-text", required=True)
-                post_parser.add_argument("--scheduled", action="store_true", help="在已定时列表查询或取消定时作品")
+                post_parser.add_argument("--scheduled", action="store_true", help="Look up or cancel a scheduled post in the scheduled list")
                 post_parser.add_argument("--result", type=Path)
-                post_parser.add_argument("--proxy", default=FACEBOOK_PAGE_PROXY, help="代理地址；不传时直连")
+                post_parser.add_argument("--proxy", default=FACEBOOK_PAGE_PROXY, help="Proxy address; connect directly when omitted")
                 add_runtime_flags(post_parser)
                 post_parser.set_defaults(headless=False)
         for action_name in ("login", "check"):
             action_parser = meta_actions.add_parser(action_name, help=f"{meta_platform} {action_name}")
             action_parser.add_argument("--account", required=True, help="Meta account name")
-            action_parser.add_argument("--proxy", default=FACEBOOK_PAGE_PROXY, help="代理地址；不传时直连")
+            action_parser.add_argument("--proxy", default=FACEBOOK_PAGE_PROXY, help="Proxy address; connect directly when omitted")
             if action_name == "login":
                 add_runtime_flags(action_parser)
                 action_parser.set_defaults(headless=False)
@@ -57,10 +57,10 @@ def register(platform_parsers):
         upload_video_parser.add_argument("--title", required=True)
         upload_video_parser.add_argument("--desc", default="")
         upload_video_parser.add_argument("--tags", default="")
-        upload_video_parser.add_argument("--page", default=None, help="Business Suite 发布主体名称；不传使用当前主体")
-        upload_video_parser.add_argument("--schedule", type=schedule_value, help=f"定时发布时间，格式 {schedule_help}")
-        upload_video_parser.add_argument("--proxy", default=FACEBOOK_PAGE_PROXY, help="代理地址；不传时直连")
-        upload_video_parser.add_argument("--result", type=Path, help="保存内容编号和发布结果 JSON")
+        upload_video_parser.add_argument("--page", default=None, help="Name of the Business Suite publishing entity; the current one is used when omitted")
+        upload_video_parser.add_argument("--schedule", type=schedule_value, help=f"Scheduled publishing time, format {schedule_help}")
+        upload_video_parser.add_argument("--proxy", default=FACEBOOK_PAGE_PROXY, help="Proxy address; connect directly when omitted")
+        upload_video_parser.add_argument("--result", type=Path, help="Save the content ID and publish result as JSON")
         add_runtime_flags(upload_video_parser)
         upload_video_parser.set_defaults(headless=False)
 
@@ -70,10 +70,10 @@ def register(platform_parsers):
         upload_note_parser.add_argument("--title", required=True)
         upload_note_parser.add_argument("--note", default="")
         upload_note_parser.add_argument("--tags", default="")
-        upload_note_parser.add_argument("--page", default=None, help="Business Suite 发布主体名称；不传使用当前主体")
-        upload_note_parser.add_argument("--schedule", type=schedule_value, help=f"定时发布时间，格式 {schedule_help}")
-        upload_note_parser.add_argument("--proxy", default=FACEBOOK_PAGE_PROXY, help="代理地址；不传时直连")
-        upload_note_parser.add_argument("--result", type=Path, help="保存内容编号和发布结果 JSON")
+        upload_note_parser.add_argument("--page", default=None, help="Name of the Business Suite publishing entity; the current one is used when omitted")
+        upload_note_parser.add_argument("--schedule", type=schedule_value, help=f"Scheduled publishing time, format {schedule_help}")
+        upload_note_parser.add_argument("--proxy", default=FACEBOOK_PAGE_PROXY, help="Proxy address; connect directly when omitted")
+        upload_note_parser.add_argument("--result", type=Path, help="Save the content ID and publish result as JSON")
         add_runtime_flags(upload_note_parser)
         upload_note_parser.set_defaults(headless=False)
 
@@ -115,8 +115,8 @@ async def upload_meta_content(request: MetaUploadRequest) -> dict:
     account_file = resolve_account_file(request.platform, request.account_name)
     if not await meta_cookie_auth(account_file, proxy=request.proxy):
         raise RuntimeError(
-            f"{request.platform} Business Suite 登录态不存在或已失效: {account_file}. "
-            f"请先执行 `sau {request.platform} login --account {request.account_name}`。"
+            f"{request.platform} Business Suite login state is missing or expired: {account_file}. "
+            f"Run `sau {request.platform} login --account {request.account_name}` first."
         )
     app = MetaBusinessUploader(
         request.platform,
@@ -136,7 +136,7 @@ async def upload_meta_content(request: MetaUploadRequest) -> dict:
 
 
 async def run(args):
-    """执行本平台命令；发布结果由平台实现核验。"""
+    """Run this platform's command; the platform implementation verifies the publish result."""
     if args.platform == "facebook-page" and args.action in {"verify", "delete"}:
         result = await meta_post_action(
             resolve_account_file(args.platform, args.account), page_id=args.page_id, page_name=args.page,

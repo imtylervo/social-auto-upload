@@ -1,29 +1,29 @@
-/** 只执行本地 Markdown 渲染；stdin/stdout 使用 JSON，正文不经过命令行参数。 */
+/** Local Markdown rendering only; stdin/stdout use JSON, and the content is never passed as a command-line argument. */
 import { renderMarkdownDocument, resolveMarkdownStyle } from 'baoyu-md';
 import { Marked } from 'marked';
 import { load } from 'cheerio';
 
 let input = '';
-// 按字符解码流，避免长中文稿跨 Buffer 边界时出现替换字符。
+// Decode the stream as characters, so long Chinese drafts do not get replacement characters across Buffer boundaries.
 process.stdin.setEncoding('utf8');
 for await (const chunk of process.stdin) input += chunk;
 try {
   const { content, theme } = JSON.parse(input);
   const markdown = new Marked({ gfm: true });
-  // 图表扩展会产生 SVG 或远程图片，不作为普通代码块静默降级。
+  // Diagram extensions produce SVG or remote images; do not silently fall back to plain code blocks.
   const tokens = markdown.lexer(content);
   markdown.walkTokens(tokens, token => {
     if (token.type === 'html' && /<\/?(?:script|style|link|iframe|object|embed)\b/i.test(token.raw)) {
-      throw Error('Markdown 内嵌 HTML 不支持脚本、外部资源或样式表，请使用内联样式');
+      throw Error('Inline HTML in Markdown does not support scripts, external resources or stylesheets; use inline styles');
     }
     if (token.type === 'code' && /^(mermaid|plantuml|infographic)(\s|$)/i.test(token.lang || '')) {
-      throw Error(`暂不支持 ${token.lang} 图表，请先导出为本地图片`);
+      throw Error(`${token.lang} diagrams are not supported yet; export them as local images first`);
     }
   });
   if (theme === 'plain') {
     process.stdout.write(JSON.stringify({ html: markdown.parser(tokens), metadata: {} }));
   } else {
-    // 显式给出全部选项，避免上游读取用户的 EXTEND.md 后改变本项目的默认排版。
+    // Pass every option explicitly, so upstream does not read the user's EXTEND.md and change this project's default layout.
     const style = resolveMarkdownStyle({ theme });
     const result = await renderMarkdownDocument(content, {
       theme, primaryColor: style.primaryColor, fontFamily: style.fontFamily,
@@ -31,11 +31,11 @@ try {
       citeStatus: false, keepTitle: true, legend: 'none',
       isMacCodeBlock: false, isShowLineNumber: false, themeMode: 'light',
     });
-    // 上游即使关闭 Mac 代码装饰也保留隐藏 SVG；只移除该装饰，不删除用户正文元素。
+    // Upstream keeps a hidden SVG even with the Mac code decoration turned off; remove only that decoration, never the user's content elements.
     const $ = load(result.html);
     $('pre.code__pre > span.mac-sign').remove();
-    // 上游用正文里的“1. / • ”和 display:block 模拟列表；平台清理 CSS 后会显示双重序号。
-    // 恢复原生列表语义，保留其余主题样式，使本地和过滤样式后的平台都只显示一次标记。
+    // Upstream fakes lists with "1. / • " in the text plus display:block; once a platform strips the CSS, the numbers show up twice.
+    // Restore native list semantics and keep the rest of the theme styles, so both the local preview and platforms that filter styles show each marker only once.
     $('ol,ul').each((_, list) => {
       const ordered = list.tagName === 'ol';
       $(list).children('li.listitem').each((index, item) => {

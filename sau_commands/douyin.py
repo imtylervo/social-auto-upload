@@ -1,4 +1,4 @@
-"""douyin 的命令参数与执行逻辑。"""
+"""Command arguments and execution logic for douyin."""
 from __future__ import annotations
 import sys
 from dataclasses import dataclass
@@ -24,7 +24,7 @@ from sau_commands.arguments import (
 
 
 def register(platform_parsers):
-    """声明本平台命令、参数及合法选项。"""
+    """Declare this platform's commands, arguments and allowed options."""
     schedule_help = SCHEDULE_FORMAT.replace("%", "%%")
     douyin_parser = platform_parsers.add_parser("douyin", help="Douyin operations")
     douyin_actions = douyin_parser.add_subparsers(dest="action", required=True)
@@ -170,7 +170,7 @@ async def upload_note(request: DouyinNoteUploadRequest) -> Path:
 
 
 async def run(args):
-    """执行本平台命令；发布结果由平台实现核验。"""
+    """Run this platform's command; the platform implementation verifies the publish result."""
     if args.action == "login":
         result = await login_douyin_account(args.account, headless=args.headless)
         if not result["success"]:
@@ -209,12 +209,12 @@ async def run(args):
         return 0
 
     if args.action == "upload-note":
-        # 如果指定了 --notef，读取文件内容作为 note
+        # If --notef is given, read the file content as the note
         note_content = args.note
         if args.notef:
             note_file = Path(args.notef)
             if not note_file.exists():
-                print(f"错误：文件不存在: {note_file}", file=sys.stderr)
+                print(f"Error: file does not exist: {note_file}", file=sys.stderr)
                 return 1
             note_content = note_file.read_text(encoding="utf-8")
 

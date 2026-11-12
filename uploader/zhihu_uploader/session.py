@@ -1,4 +1,4 @@
-"""知乎登录会话保存与当前页身份核对。"""
+"""Saving the Zhihu login session and checking the identity on the current page."""
 from __future__ import annotations
 
 import json
@@ -11,12 +11,12 @@ from conf import LOCAL_CHROME_PATH
 from uploader.zhihu_uploader.constants import ZHIHU_CREATOR_URL
 
 
-PROFILE_IMAGE = "button.AppHeader-profileEntry img[alt^='点击打开'][alt$='的主页']"
+PROFILE_IMAGE = "button.AppHeader-profileEntry img[alt^='点击打开'][alt$='的主页']"  # alt = "click to open <name>'s home page"
 
 
 async def read_zhihu_identity(page: Page) -> dict:
-    """从知乎页头已登录头像读取展示名与头像地址，作为本地会话绑定信息。"""
-    # AppHeader-profileEntry 是创作中心与视频页实际共用的当前用户入口。
+    """Read the display name and avatar URL from the logged-in avatar in the Zhihu header, as the binding info of the local session."""
+    # AppHeader-profileEntry is the current-user entry actually shared by the creator center and the video page.
     profile = page.locator(PROFILE_IMAGE)
     await expect(profile).to_have_count(1, timeout=30000)
     await expect(profile).to_be_visible()
@@ -25,26 +25,26 @@ async def read_zhihu_identity(page: Page) -> dict:
     avatar = profile.get_attribute("src")
     avatar_url = (await avatar or "").strip()
     if not name or not avatar_url:
-        raise RuntimeError("知乎页头没有可读取的当前账号信息")
+        raise RuntimeError("The Zhihu header has no readable current account info")
     avatar_path = urlsplit(avatar_url).path
     if not avatar_path:
-        raise RuntimeError("知乎页头头像缺少稳定路径，无法绑定当前会话")
+        raise RuntimeError("The Zhihu header avatar has no stable path; cannot bind the current session")
     return {"name": name, "avatar_path": avatar_path}
 
 
 def load_zhihu_identity(account_file: str | Path) -> dict:
-    """读取登录时记录的知乎页头信息，避免误用另一个本地账号文件。"""
+    """Read the Zhihu header info recorded at login, so another local account file is not used by mistake."""
     identity_file = Path(account_file).with_suffix(".identity.json")
     identity = json.loads(identity_file.read_text(encoding="utf-8"))
     if not identity.get("name") or not identity.get("avatar_path"):
-        raise ValueError(f"知乎账号绑定不完整，请重新登录: {identity_file}")
+        raise ValueError(f"Zhihu account binding is incomplete, please log in again: {identity_file}")
     return identity
 
 
 async def login_zhihu_account(account_file: str | Path, timeout: int = 600) -> dict:
-    """在可见 Chrome 完成登录，核对页头账号后保存本地 storage state。"""
+    """Log in in a visible Chrome, check the header account and then save the local storage state."""
     if timeout <= 0:
-        raise ValueError("登录期限必须大于 0 秒")
+        raise ValueError("The login timeout must be greater than 0 seconds")
     account_file = Path(account_file).resolve()
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(
@@ -54,12 +54,12 @@ async def login_zhihu_account(account_file: str | Path, timeout: int = 600) -> d
             context = await browser.new_context(timezone_id="Asia/Shanghai")
             page = await context.new_page()
             await page.goto(ZHIHU_CREATOR_URL, wait_until="domcontentloaded", timeout=45000)
-            print("请在打开的 Chrome 中完成知乎登录；账号密码和验证码直接在网页输入。", flush=True)
+            print("Complete the Zhihu login in the open Chrome; enter the account, password and captcha directly on the web page.", flush=True)
             await page.locator(PROFILE_IMAGE).wait_for(state="visible", timeout=timeout * 1000)
             identity = await read_zhihu_identity(page)
             identity_file = account_file.with_suffix(".identity.json")
             if identity_file.exists() and load_zhihu_identity(account_file) != identity:
-                raise RuntimeError("当前知乎页头与已绑定会话不同，请使用新的 --account")
+                raise RuntimeError("The current Zhihu header differs from the bound session; use a new --account")
             account_file.parent.mkdir(parents=True, exist_ok=True)
             await context.storage_state(path=str(account_file))
             identity_file.write_text(json.dumps(identity, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -69,7 +69,7 @@ async def login_zhihu_account(account_file: str | Path, timeout: int = 600) -> d
 
 
 async def check_zhihu_account(account_file: str | Path, headless: bool = True) -> bool:
-    """仅明确回到登录路径时返回失效；网络错误或身份不一致直接报告。"""
+    """Report expired only when the page clearly goes back to the login path; network errors or an identity mismatch are reported directly."""
     account_file = Path(account_file)
     if not account_file.is_file():
         return False
@@ -83,13 +83,13 @@ async def check_zhihu_account(account_file: str | Path, headless: bool = True) -
             page = await context.new_page()
             response = await page.goto(ZHIHU_CREATOR_URL, wait_until="domcontentloaded", timeout=45000)
             if response is not None and response.status >= 400:
-                raise RuntimeError(f"知乎创作中心访问失败，HTTP {response.status}")
+                raise RuntimeError(f"Failed to open the Zhihu creator center, HTTP {response.status}")
             target = urlsplit(page.url)
             if target.path.startswith(("/signin", "/account/unlogin")):
                 return False
             actual = await read_zhihu_identity(page)
             if actual != expected:
-                raise RuntimeError("知乎当前页头与本地账号绑定不一致")
+                raise RuntimeError("The current Zhihu header does not match the local account binding")
             return True
         finally:
             await browser.close()

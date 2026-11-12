@@ -1,4 +1,4 @@
-"""大鱼号视频发布：核验主体、等待处理、填写表单、确认发表并记录提交结果。"""
+"""Dayu video publishing: check the identity, wait for processing, fill in the form, confirm publishing and record the submission result."""
 from __future__ import annotations
 
 import asyncio
@@ -24,28 +24,28 @@ from utils.log import dayu_logger
 
 
 async def wait_dayu_processing(page: Page, filename: str, timeout: int = 600) -> None:
-    """处理失败优先于完成文案；100% 和“上传成功，处理中”都不能判为可发表。"""
+    """A processing failure takes priority over the completion text; neither 100% nor "上传成功，处理中" (uploaded, processing) counts as ready to publish."""
     deadline = time.monotonic() + timeout
-    # 视频容器是上传前后保留的业务区域；不把变化中的进度或结果文案写进锚点。
+    # The video container is a business area that persists before and after upload; changing progress or result text is not used as an anchor.
     region = page.locator(".article-write_video-container")
     await expect(region).to_have_count(1)
     previous = None
     while time.monotonic() < deadline:
         text = await region.inner_text(timeout=max(1, min(5000, int((deadline - time.monotonic()) * 1000))))
         if re.search(r"失败|不支持|小于|超出|(?<!不)超过|请重新上传|无法", text):
-            raise RuntimeError(f"大鱼号视频处理被拒绝: {text.strip()}")
-        if "视频上传成功，处理完成" in text:
+            raise RuntimeError(f"Dayu rejected the video during processing: {text.strip()}")
+        if "视频上传成功，处理完成" in text:  # "upload succeeded, processing complete"
             await expect(region.locator(".article-write_video-container-result-desc p span")).to_have_text(filename)
             return
         if text != previous:
-            dayu_logger.info(f"大鱼号上传状态: {text.strip()}")
+            dayu_logger.info(f"Dayu upload status: {text.strip()}")
             previous = text
         await asyncio.sleep(min(.5, max(0, deadline - time.monotonic())))
-    raise TimeoutError("等待大鱼号上传/处理超时；未提交发表，请检查当前素材状态")
+    raise TimeoutError("Timed out waiting for Dayu upload/processing; nothing was submitted for publishing, check the current state of the asset")
 
 
 class DayuVideo(BaseVideoUploader):
-    """以实际页面流程发表一个视频，持久化提交 ID 供断线后只读核验。"""
+    """Publish one video through the actual page flow, and persist the submission ID so it can be verified read-only after a disconnect."""
 
     SUPPORTED_VIDEO_EXTENSIONS = {
         ".3gp", ".avi", ".flv", ".mp4", ".m3u8", ".mpg", ".asf", ".wmv",
@@ -72,35 +72,35 @@ class DayuVideo(BaseVideoUploader):
         self.schedule = schedule
 
     def validate_upload_args(self) -> None:
-        """上传前拒绝无法解码、时长不足、超限素材及缺失必填信息。"""
+        """Before upload, reject assets that cannot be decoded, are too short or exceed limits, and missing required fields."""
         self.schedule = validate_dayu_schedule(self.schedule)
         self.file_path = self.validate_video_file(self.file_path)
         self.thumbnail_path = self.validate_image_file(self.thumbnail_path)
         if not self.account_file.is_file():
-            raise FileNotFoundError("请先执行 sau dayu login 保存账号")
+            raise FileNotFoundError("Run sau dayu login first to save the account")
         load_dayu_identity(self.account_file)
-        # 编辑器按汉字 1、ASCII 0.5 计数（页面上 demo 显示 2/60）。
+        # The editor counts a Chinese character as 1 and ASCII as 0.5 (the page shows "demo" as 2/60).
         title_length = sum(.5 if ord(char) <= 255 else 1 for char in self.title.strip())
         if not 5 <= title_length <= 60:
-            raise ValueError("大鱼号标题长度需在 5–60 字之间（ASCII 按半字计数）")
+            raise ValueError("Dayu title length must be 5–60 characters (ASCII counts as half a character)")
         if len(self.desc) > 200:
-            raise ValueError("大鱼号视频简介不能超过 200 字")
+            raise ValueError("Dayu video description must not exceed 200 characters")
         if self.category not in DAYU_VIDEO_CATEGORIES:
-            raise ValueError(f"视频分类必须为: {', '.join(DAYU_VIDEO_CATEGORIES)}")
+            raise ValueError(f"Video category must be one of: {', '.join(DAYU_VIDEO_CATEGORIES)}")
         if self.source not in DAYU_SOURCE_TYPES:
-            raise ValueError(f"必须明确提供信息来源: {', '.join(DAYU_SOURCE_TYPES)}")
+            raise ValueError(f"An information source must be given explicitly: {', '.join(DAYU_SOURCE_TYPES)}")
         if self.source == DAYU_SOURCE_REPRINT:
             original = urlsplit(self.source_url)
             if original.scheme not in ("http", "https") or not original.hostname:
-                raise ValueError("信息来源为转载时，必须使用 --source-url 提供 http/https 原文链接")
+                raise ValueError("When the information source is 转载 (reprint), --source-url must give the http/https link of the original")
         elif self.source_url:
-            raise ValueError("仅信息来源为转载时可以填写 --source-url 原文链接")
+            raise ValueError("--source-url may only be given when the information source is 转载 (reprint)")
         if any(not tag.strip() or len(tag) > 10 for tag in self.tags):
-            raise ValueError("视频标签不能为空且每个不能超过 10 字")
+            raise ValueError("Video tags must not be empty and each must be at most 10 characters")
         if self.upload_timeout <= 0:
-            raise ValueError("上传及发布核验期限必须大于 0 秒")
+            raise ValueError("The upload and publish verification timeout must be greater than 0 seconds")
         if self.thumbnail_path.stat().st_size > 5 * 1024 ** 2:
-            raise ValueError("大鱼号视频封面不能超过 5 MiB")
+            raise ValueError("Dayu video cover must not exceed 5 MiB")
         capture = cv2.VideoCapture(str(self.file_path))
         try:
             fps = capture.get(cv2.CAP_PROP_FPS)
@@ -110,23 +110,23 @@ class DayuVideo(BaseVideoUploader):
         finally:
             capture.release()
         if not all(math.isfinite(value) and value > 0 for value in (fps, frames, width, height)):
-            raise ValueError("无法读取视频尺寸、帧数或帧率，拒绝上传未知素材")
+            raise ValueError("Cannot read the video size, frame count or frame rate; refusing to upload an unknown asset")
         duration = frames / fps
         if duration < 5:
-            raise ValueError(f"大鱼号视频至少需要 5 秒，当前约 {duration:.3f} 秒")
+            raise ValueError(f"Dayu videos must be at least 5 seconds, this one is about {duration:.3f} seconds")
         portrait = height > width
         if self.file_path.stat().st_size > (5 if portrait else 10) * 1024 ** 3:
-            raise ValueError("视频超过大鱼号文件大小限制（横屏 10 GiB、竖屏 5 GiB）")
+            raise ValueError("Video exceeds the Dayu file size limit (landscape 10 GiB, portrait 5 GiB)")
         if portrait and duration > 1800:
-            raise ValueError("大鱼号竖屏视频时长不能超过 30 分钟")
+            raise ValueError("Dayu portrait videos must not be longer than 30 minutes")
 
     async def fill_video_form(self, page: Page) -> None:
-        """填写并读回标题、简介、分类、标签、封面与来源，不代选来源。"""
-        # 标题实际为 contenteditable；固定 placeholder 区分简介输入框和其他可编辑区域。
+        """Fill in and read back the title, description, category, tags, cover and source; the source is never chosen on the user's behalf."""
+        # The title is actually a contenteditable; the fixed placeholder ("视频标题最少5个字" = title needs at least 5 characters) tells it apart from the description box and other editable areas.
         title = page.locator('[contenteditable="true"][placeholder="视频标题最少5个字"]')
         await title.fill(self.title)
         await expect(title).to_have_text(self.title)
-        # 表单中简介使用 textarea；分类通过字段 label 限定，避免点击其他同构下拉框。
+        # The description uses a textarea in the form; the category is scoped by its field label ("视频分类" = video category) so other dropdowns of the same structure are not clicked.
         description = page.locator(".w-form-field").filter(has=page.locator("textarea")).locator("textarea")
         await description.fill(self.desc)
         await expect(description).to_have_value(self.desc)
@@ -137,35 +137,35 @@ class DayuVideo(BaseVideoUploader):
         await category.get_by_role("link", name=self.category, exact=True).click()
         await expect(category.locator(".widgets-selects_container")).to_have_text(self.category)
         if self.tags:
-            # 标签组件内会动态增加输入槽，先限定组件再按用户输入顺序选槽位。
+            # The tag component adds input slots dynamically; scope to the component first, then pick slots in the order the user gave.
             tags = page.locator(".article-write_video-tags")
             await tags.click()
             for index, tag in enumerate(self.tags):
-                # 标签槽按用户给定顺序排列；Enter 在末尾新增一个空槽，并非任意选第 N 个控件。
+                # Tag slots follow the order the user gave; Enter adds an empty slot at the end, it does not pick an arbitrary Nth control.
                 inputs = tags.locator("input")
                 await expect(inputs).to_have_count(index + 1)
                 await inputs.nth(index).fill(tag)
                 await inputs.nth(index).press("Enter")
             await title.click()
-            # 实测 Enter/失焦后会短暂少一个字并保留空槽，Vue 随后才恢复最终标签值。
+            # Tested: after Enter/blur the value briefly loses a character and keeps an empty slot; Vue restores the final tag value afterwards.
             await expect(tags.locator("input")).to_have_count(len(self.tags))
             for index, tag in enumerate(self.tags):
                 await expect(tags.locator("input").nth(index)).to_have_value(tag)
-        # coverImg 是封面字段的语义 ID，限定其中 input 避免把封面传给主视频上传器。
+        # coverImg is the semantic ID of the cover field; scoping to its input keeps the cover from going to the main video uploader.
         await page.locator("#coverImg input[type=file]").set_input_files(str(self.thumbnail_path))
-        # 裁剪与素材选择共用弹窗组件，只定位本次可见实例，排除隐藏模板。
+        # Cropping and asset selection share one dialog component; locate only the instance visible now and skip hidden templates.
         dialog = page.locator(".article-material-image-dialog:visible")
         await expect(dialog).to_have_count(1, timeout=30000)
-        await dialog.get_by_role("button", name="保存", exact=True).click()
+        await dialog.get_by_role("button", name="保存", exact=True).click()  # "保存" = Save
         await expect(page.locator(".article-material-image-dialog:visible")).to_have_count(0, timeout=30000)
         cover = page.locator("#coverImg #form_main_cover_img")
         await expect(cover).to_be_visible()
         await expect(cover).to_have_attribute("src", re.compile(r"^https?://image\.uc\.cn/"))
-        # 来源 radio 的 value 与页面选项一致；用业务值区分选项，不依赖左右排列顺序。
+        # The value of each source radio matches the page option; options are told apart by business value, not by their left-to-right order.
         source = page.locator(f'input[type=radio][value="{self.source}"]')
         await source.check()
         await expect(source).to_be_checked()
-        # 原文链接按来源区域内的 label 定位，排除其他文本框；非转载时该条件字段应消失。
+        # The original-link field ("原文链接") is located by its label inside the source area, excluding other text boxes; when the source is not a reprint this conditional field should disappear.
         original_link = page.locator(".source-remark-detail .article-write_box-form-filed").filter(
             has=page.locator("label").filter(has_text="原文链接"),
         ).locator('input[type="text"]')
@@ -177,7 +177,7 @@ class DayuVideo(BaseVideoUploader):
         await fill_dayu_schedule(page, self.schedule)
 
     async def main(self) -> dict:
-        """提交只执行一次；平台最终发表响应确认本次作品 ID 后即成功。"""
+        """Submit only once; success as soon as the platform's final publish response confirms this post's ID."""
         self.validate_upload_args()
         expected = load_dayu_identity(self.account_file)
         results_dir = self.account_file.parent / "dayu_results"
@@ -200,17 +200,17 @@ class DayuVideo(BaseVideoUploader):
                 await page.goto(DAYU_VIDEO_URL, wait_until="domcontentloaded", timeout=45000)
                 identity = await read_dayu_identity(page)
                 if identity["wmid"] != expected["wmid"]:
-                    raise RuntimeError("大鱼号主体不匹配，上传已中止")
+                    raise RuntimeError("Dayu identity does not match, upload aborted")
                 result["identity"] = identity
-                # 主视频上传器有 name=file，封面 input 没有此属性，可据此区分两种上传入口。
+                # The main video uploader has name=file and the cover input does not; this tells the two upload inputs apart.
                 file_input = page.locator('input[type="file"][name="file"]')
                 await expect(file_input).to_have_count(1, timeout=30000)
                 await file_input.set_input_files(str(self.file_path))
                 await wait_dayu_processing(page, self.file_path.name, self.upload_timeout)
                 await self.fill_video_form(page)
-                # 填表和异步封面处理之后，再次核对同一主体及视频处理结果。
+                # After filling in the form and the async cover processing, check the same identity and the video processing result again.
                 if (await read_dayu_identity(page))["wmid"] != identity["wmid"]:
-                    raise RuntimeError("填表期间大鱼号主体发生变化，拒绝提交")
+                    raise RuntimeError("The Dayu identity changed while the form was being filled in; refusing to submit")
                 await wait_dayu_processing(page, self.file_path.name, self.upload_timeout)
                 if self.prepare_only:
                     await page.screenshot(path=str(result_file.with_suffix(".png")), full_page=True)
@@ -219,12 +219,12 @@ class DayuVideo(BaseVideoUploader):
 
                 await submit_dayu_publication(page, result, result_file)
                 await context.storage_state(path=str(self.account_file))
-                action = "定时发布已安排" if self.schedule else "发表成功"
-                dayu_logger.success(f"大鱼号{action}: {result['content_id']}")
+                action = "定时发布已安排" if self.schedule else "发表成功"  # "scheduled publishing arranged" / "published"
+                dayu_logger.success(f"Dayu {action}: {result['content_id']}")
                 return result
             except Exception as exc:
                 result["error"] = str(exc)
-                dayu_logger.error(f"大鱼号阶段={result['status']}，结果文件={result_file}: {exc}")
+                dayu_logger.error(f"Dayu stage={result['status']}, result file={result_file}: {exc}")
                 if self.debug and page is not None:
                     await page.screenshot(path=str(result_file.with_suffix(".png")))
                 raise

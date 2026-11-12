@@ -1,4 +1,4 @@
-"""Facebook 浏览器发布。"""
+"""Facebook publishing through the browser."""
 
 from .main import FacebookVideo, facebook_cookie_auth, facebook_setup
 

@@ -28,7 +28,7 @@ if __name__ == '__main__':
         sleep(1)
         if check_qrcode["code_status"] == 2:
             print(json.dumps(check_qrcode["login_info"], indent=4))
-            print("当前 cookie：" + xhs_client.cookie)
+            print("Current cookie: " + xhs_client.cookie)
             break
 
     print(json.dumps(xhs_client.get_self_info(), indent=4))

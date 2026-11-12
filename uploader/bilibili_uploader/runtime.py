@@ -154,14 +154,14 @@ def ensure_biliup_binary(force_check: bool = True) -> Path:
     binary_path = build_biliup_runtime_path()
     local_version = read_local_biliup_version()
 
-    # 默认优先复用本地已存在的 biliup，避免每次执行都去请求 GitHub latest release。
+    # By default, reuse a local biliup if one exists, so each run does not query the GitHub latest release.
     if binary_path.exists() and not force_check:
         return binary_path
 
     try:
         release = fetch_latest_release()
     except Exception:
-        # 如果本地已经有可执行的 biliup，就在 GitHub 限流/网络失败时直接复用本地版本。
+        # If an executable biliup already exists locally, fall back to it when GitHub rate-limits us or the network fails.
         if binary_path.exists():
             return binary_path
         raise

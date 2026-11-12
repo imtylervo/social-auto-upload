@@ -1,4 +1,4 @@
-"""平台无关的文章正文：安全内联 HTML、正文顺序和相对于原稿的图片路径。"""
+"""Platform-independent article content: safe inline HTML, content order, and image paths relative to the source draft."""
 from __future__ import annotations
 
 import re
@@ -22,27 +22,27 @@ ARTICLE_FORMAT_TAGS = ARTICLE_TAGS - {"section", "div", "p", "br", "span", "img"
 
 
 def validate_article_style(style: str) -> None:
-    """保留排版声明，拒绝带外部资源或可执行内容的 CSS；不静默删除输入样式。"""
+    """Keep layout declarations and reject CSS with external resources or executable content; never silently drop input styles."""
     def inspect(tokens):
         for token in tokens:
             if token.type in {"error", "url", "at-keyword"}:
-                raise ValueError("正文 CSS 不能包含语法错误、外部资源或 @ 规则")
+                raise ValueError("Content CSS must not contain syntax errors, external resources or @ rules")
             if token.type == "function":
                 if token.lower_name in {"url", "expression", "var"}:
-                    raise ValueError(f"正文 CSS 不支持 {token.name}()，请提供已内联的具体样式值")
+                    raise ValueError(f"Content CSS does not support {token.name}(); provide concrete inlined style values")
                 inspect(token.arguments)
             if hasattr(token, "content"):
                 inspect(token.content)
     for declaration in tinycss2.parse_declaration_list(style, skip_comments=True, skip_whitespace=True):
         if declaration.type != "declaration" or declaration.lower_name.startswith(("--", "-moz-binding")):
-            raise ValueError("正文 style 必须为具体的 CSS 声明，不支持变量或规则块")
+            raise ValueError("Content style must be concrete CSS declarations; variables and rule blocks are not supported")
         if declaration.lower_name in {"behavior", "-ms-behavior"}:
-            raise ValueError("正文 CSS 不能包含可执行行为")
+            raise ValueError("Content CSS must not contain executable behavior")
         inspect(declaration.value)
 
 
 class ArticleDocument(HTMLParser):
-    """解析后保留样式及文字/图片位置；平台可对这份结果增加自己的限制。"""
+    """After parsing, keep the styles and the text/image positions; platforms may add their own restrictions on this result."""
 
     VOID_TAGS = {"br", "hr", "img"}
 
@@ -67,9 +67,9 @@ class ArticleDocument(HTMLParser):
         self.feed(html)
         self.close()
         if self.stack:
-            raise ValueError(f"正文 HTML 标签未闭合: {self.stack[-1]}")
+            raise ValueError(f"Unclosed HTML tag in content: {self.stack[-1]}")
         if not "".join(self.text).strip():
-            raise ValueError("图文正文不能为空，请提供正文文字")
+            raise ValueError("Image post content must not be empty; provide some text")
         image_index = 0
         content = []
         for part in self.parts:
@@ -85,7 +85,7 @@ class ArticleDocument(HTMLParser):
         }
 
     def image_html(self, index: int) -> str:
-        """重建图片时保留排版属性，以绝对路径保持输出移动后的资源定位。"""
+        """Keep layout attributes when rebuilding images, and use absolute paths so resources are still found after the output is moved."""
         attrs = {**self.image_attributes[index], "src": quote(self.images[index].as_posix(), safe="/:")}
         return "<img" + "".join(f' {key}="{escape(value or "", quote=True)}"' for key, value in attrs.items()) + ">"
 
@@ -95,12 +95,12 @@ class ArticleDocument(HTMLParser):
             self.in_head = True
             return
         if tag in {"script", "iframe", "object", "embed", "link", "style"}:
-            raise ValueError(f"正文不支持 <{tag}>；样式请使用元素内联 style，不引用外部资源")
+            raise ValueError(f"Content does not support <{tag}>; use inline style on elements for styling, without external resources")
         if self.in_head:
             return
         if tag == "html":
             if set(attributes) - {"lang", "style"}:
-                raise ValueError("<html> 仅支持 lang 和 style 属性")
+                raise ValueError("<html> only supports the lang and style attributes")
             self.html_style = attributes.get("style") or ""
             if self.html_style.strip():
                 validate_article_style(self.html_style)
@@ -108,14 +108,14 @@ class ArticleDocument(HTMLParser):
             return
         if tag == "body":
             if set(attributes) - {"style", "class", "id"}:
-                raise ValueError("<body> 仅支持 style、class、id 属性")
+                raise ValueError("<body> only supports the style, class and id attributes")
             self.body_style = attributes.get("style") or ""
             if self.body_style.strip():
                 validate_article_style(self.body_style)
                 self.parts.append(f'<section style="{escape(self.body_style, quote=True)}">')
             return
         if tag not in ARTICLE_TAGS:
-            raise ValueError(f"正文暂不支持 <{tag}>")
+            raise ValueError(f"Content does not support <{tag}> yet")
         self.attributes.setdefault(tag, set()).update(attributes)
         allowed = {"style", "class", "id", "title"}
         if tag == "img":
@@ -127,21 +127,21 @@ class ArticleDocument(HTMLParser):
         if tag == "ol":
             allowed |= {"start"}
         if set(attributes) - allowed - {key for key in attributes if key.startswith("data-")}:
-            raise ValueError(f"<{tag}> 不支持属性 {', '.join(sorted(set(attributes) - allowed))}")
+            raise ValueError(f"<{tag}> does not support the attributes {', '.join(sorted(set(attributes) - allowed))}")
         if "style" in attributes:
             validate_article_style(attributes["style"] or "")
         if tag == "a" and "href" in attributes:
             href = attributes["href"] or ""
             if not href.startswith("#") and urlsplit(href).scheme not in {"http", "https", "mailto"}:
-                raise ValueError("正文链接仅支持 http/https、mailto 或文内锚点")
+                raise ValueError("Content links only support http/https, mailto or in-page anchors")
         if tag == "img":
             source = unquote(attributes.pop("src", "") or "")
             if (not source or source.startswith("//") or
                     (not Path(source).is_absolute() and re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", source))):
-                raise ValueError("正文图片 src 必须为本地相对路径或绝对路径，不支持网络地址、file URL 和 data URL")
+                raise ValueError("Content image src must be a local relative or absolute path; web addresses, file URLs and data URLs are not supported")
             image = (self.base_dir / Path(source).expanduser()).resolve()
             if not image.is_file():
-                raise FileNotFoundError(f"图片不存在: {image}")
+                raise FileNotFoundError(f"Image does not exist: {image}")
             self.parts.append(image)
             self.images.append(image)
             self.image_attributes.append(attributes)
@@ -178,7 +178,7 @@ class ArticleDocument(HTMLParser):
                 self.parts.append("</section>")
             return
         if not self.stack or self.stack.pop() != tag:
-            raise ValueError(f"正文 HTML 标签未正确闭合: </{tag}>")
+            raise ValueError(f"HTML tag in content is not closed correctly: </{tag}>")
         normalized = {"b": "strong", "i": "em"}.get(tag, tag)
         self.parts.append(f'</{normalized}>')
 

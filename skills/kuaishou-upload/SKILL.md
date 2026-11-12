@@ -1,67 +1,67 @@
 ---
 name: kuaishou-upload
-description: 当 agent 需要通过已安装的 `sau` CLI 完成快手登录、cookie 校验、视频上传或图文发布时使用这个 skill。该 skill 适用于已经安装 `social-auto-upload` 且可调用 `sau` 命令的环境。优先使用这个 skill 进行稳定的命令式快手工作流，而不是一开始就阅读 uploader 源码。
+description: Use this skill when an agent needs to log in to Kuaishou, validate cookies, upload videos or publish image posts through the installed `sau` CLI. It applies to environments where `social-auto-upload` is installed and the `sau` command can be called. Prefer this skill for a stable, command-driven Kuaishou workflow instead of reading the uploader source code first.
 license: MIT-0
 slug: social-auto-upload-kuaishou-upload
-displayName: 快手视频与图文发布
+displayName: Kuaishou video and image post publishing
 version: 1.0.0
-summary: 使用 sau 登录快手并发布视频或图文。
+summary: Log in to Kuaishou with sau and publish videos or image posts.
 ---
 
-# 快手上传 Skill
+# Kuaishou upload Skill
 
-优先把 `sau` 作为主接口。
+Use `sau` as the primary interface.
 
-不要假设当前环境一定能读取仓库源码。
-不要一开始就去读 `uploader/`。
-只有在命令不可用或 CLI 执行失败时，才回退到故障排查说明。
+Do not assume the current environment can read the repository source.
+Do not start by reading `uploader/`.
+Fall back to the troubleshooting notes only when the command is unavailable or the CLI run fails.
 
-## 功能概览
+## Overview
 
-| 功能 | 命令入口 | 说明 |
+| Function | Command entry | Notes |
 | --- | --- | --- |
-| 快手登录 | `sau kuaishou login --account <name>` | 生成或刷新指定账号的 cookie |
-| cookie 校验 | `sau kuaishou check --account <name>` | 检查指定账号 cookie 是否有效 |
-| 视频上传 | `sau kuaishou upload-video ...` | 上传并发布快手视频 |
-| 图文上传 | `sau kuaishou upload-note ...` | 上传并发布快手图文 |
+| Kuaishou login | `sau kuaishou login --account <name>` | Create or refresh the cookie for the given account |
+| Cookie check | `sau kuaishou check --account <name>` | Check whether the cookie for the given account is valid |
+| Video upload | `sau kuaishou upload-video ...` | Upload and publish a Kuaishou video |
+| Image post upload | `sau kuaishou upload-note ...` | Upload and publish a Kuaishou image post |
 
-元数据约定：
+Metadata conventions:
 
-- 视频使用 `title + desc + tags`
-- 图文使用 `title + note + tags`
+- Videos use `title + desc + tags`
+- Image posts use `title + note + tags`
 
-## 默认工作流
+## Default workflow
 
-1. 先确认 `references/runtime-requirements.md` 里的运行前提。
-2. 再确认 `references/cli-contract.md` 里的命令契约。
-3. 执行匹配的 `sau kuaishou ...` 命令。
-4. 如果命令失败，再看 `references/troubleshooting.md`。
+1. First confirm the runtime prerequisites in `references/runtime-requirements.md`.
+2. Then confirm the command contract in `references/cli-contract.md`.
+3. Run the matching `sau kuaishou ...` command.
+4. If the command fails, read `references/troubleshooting.md`.
 
-## 支持动作
+## Supported actions
 
-- 使用 `sau kuaishou login --account <name>` 登录快手
-- 使用 `sau kuaishou check --account <name>` 校验 cookie 是否有效
-- 使用 `sau kuaishou upload-video ...` 上传快手视频
-- 使用 `sau kuaishou upload-note ...` 上传快手图文
+- Log in to Kuaishou with `sau kuaishou login --account <name>`
+- Check whether the cookie is valid with `sau kuaishou check --account <name>`
+- Upload a Kuaishou video with `sau kuaishou upload-video ...`
+- Upload a Kuaishou image post with `sau kuaishou upload-note ...`
 
-## 命令选择建议
+## Choosing a command
 
-- 当用户需要新的 cookie，或现有 cookie 已失效时，使用 `login`
-- 当用户只需要确认 cookie 状态时，使用 `check`
-- 当用户要发布视频时，使用 `upload-video`
-- 当用户要发布图文时，使用 `upload-note`
+- Use `login` when the user needs a new cookie or the existing cookie has expired
+- Use `check` when the user only needs to confirm the cookie state
+- Use `upload-video` when the user wants to publish a video
+- Use `upload-note` when the user wants to publish an image post
 
-## 执行前检查
+## Checks before running
 
-- 先确认当前 shell 里是否可以调用 `sau`
-- 如果 `sau` 不可用，按 `references/runtime-requirements.md` 里的回退方式处理
-- 当用户明确指定无头或有头模式时，显式传 `--headless` 或 `--headed`
-- 只有用户明确要求定时发布时，才使用 `--schedule`
-- 如果登录流程生成了本地二维码图片，不要只把图片路径告诉用户
-- 二维码图片本身就是给用户扫码的，优先直接把本地图片展示/发送给用户
+- First confirm that `sau` can be called in the current shell
+- If `sau` is not available, follow the fallback in `references/runtime-requirements.md`
+- When the user explicitly asks for headless or headed mode, pass `--headless` or `--headed` explicitly
+- Use `--schedule` only when the user explicitly asks for scheduled publishing
+- If the login flow produces a local QR code image, do not just tell the user the image path
+- The QR code image itself is meant for the user to scan, so show or send the local image to the user directly
 
-## 参考文档
+## References
 
-- 运行前提：`references/runtime-requirements.md`
-- CLI 契约：`references/cli-contract.md`
-- 故障排查：`references/troubleshooting.md`
+- Runtime prerequisites: `references/runtime-requirements.md`
+- CLI contract: `references/cli-contract.md`
+- Troubleshooting: `references/troubleshooting.md`

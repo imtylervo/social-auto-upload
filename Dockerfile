@@ -11,7 +11,7 @@ RUN npm install
 ENV NODE_ENV=production
 ENV PATH=/app/node_modules/.bin:$PATH
 
-#   替换前端中的地址
+#   Replace the addresses in the frontend
 RUN sed -i 's#\${baseUrl}##g' /app/src/views/AccountManagement.vue
 RUN sed -i "s#\${import\.meta\.env\.VITE_API_BASE_URL || 'http:\/\/localhost:5409'}##g" /app/src/api/material.js
 RUN sed -i 's#localhost:5409##g' /app/.env.production

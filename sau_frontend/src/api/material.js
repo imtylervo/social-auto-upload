@@ -1,29 +1,29 @@
 import { http } from '@/utils/request'
 
-// 素材管理API
+// Material management API
 export const materialApi = {
-  // 获取所有素材
+  // Get all materials
   getAllMaterials: () => {
     return http.get('/getFiles')
   },
   
-  // 上传素材
+  // Upload a material
   uploadMaterial: (formData, onUploadProgress) => {
-    // 使用http.upload方法，它已经配置了正确的Content-Type
+    // Use http.upload, which already sets the right Content-Type
     return http.upload('/uploadSave', formData, onUploadProgress)
   },
   
-  // 删除素材
+  // Delete a material
   deleteMaterial: (id) => {
     return http.get(`/deleteFile?id=${id}`)
   },
   
-  // 下载素材
+  // Download a material
   downloadMaterial: (filePath) => {
     return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409'}/download/${filePath}`
   },
   
-  // 获取素材预览URL
+  // Get the preview URL of a material
   getMaterialPreviewUrl: (filename) => {
     return `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5409'}/getFile?filename=${filename}`
   }

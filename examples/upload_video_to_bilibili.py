@@ -16,9 +16,9 @@ if __name__ == '__main__':
 
     for index, file in enumerate(files):
         title, tags = get_title_and_hashtags(str(file))
-        print(f"视频文件名：{file}")
-        print(f"标题：{title}")
-        print(f"Hashtag：{tags}")
+        print(f"Video file name: {file}")
+        print(f"Title: {title}")
+        print(f"Hashtag: {tags}")
         desc = title
         schedule_text = publish_datetimes[index].strftime("%Y-%m-%d %H:%M")
         command = [

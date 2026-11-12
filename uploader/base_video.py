@@ -28,12 +28,12 @@ class BaseVideoUploader:
     def validate_video_file(cls, file_path: str | Path) -> Path:
         path = Path(file_path).expanduser().resolve()
         if not path.exists():
-            raise FileNotFoundError(f"视频文件不存在: {path}")
+            raise FileNotFoundError(f"Video file not found: {path}")
         if not path.is_file():
-            raise ValueError(f"视频路径不是文件: {path}")
+            raise ValueError(f"Video path is not a file: {path}")
         if path.suffix.lower() not in cls.SUPPORTED_VIDEO_EXTENSIONS:
             raise ValueError(
-                f"不支持的视频格式: {path.suffix}，当前支持: {', '.join(sorted(cls.SUPPORTED_VIDEO_EXTENSIONS))}"
+                f"Unsupported video format: {path.suffix}, supported: {', '.join(sorted(cls.SUPPORTED_VIDEO_EXTENSIONS))}"
             )
 
         return path
@@ -42,12 +42,12 @@ class BaseVideoUploader:
     def validate_image_file(cls, file_path: str | Path) -> Path:
         path = Path(file_path).expanduser().resolve()
         if not path.exists():
-            raise FileNotFoundError(f"图片文件不存在: {path}")
+            raise FileNotFoundError(f"Image file not found: {path}")
         if not path.is_file():
-            raise ValueError(f"图片路径不是文件: {path}")
+            raise ValueError(f"Image path is not a file: {path}")
         if path.suffix.lower() not in cls.SUPPORTED_IMAGE_EXTENSIONS:
             raise ValueError(
-                f"不支持的图片格式: {path.suffix}，当前支持: {', '.join(sorted(cls.SUPPORTED_IMAGE_EXTENSIONS))}"
+                f"Unsupported image format: {path.suffix}, supported: {', '.join(sorted(cls.SUPPORTED_IMAGE_EXTENSIONS))}"
             )
         return path
 
@@ -57,14 +57,14 @@ class BaseVideoUploader:
             return 0
 
         if not isinstance(publish_date, datetime):
-            raise TypeError("publish_date 必须是 datetime 类型或 0")
+            raise TypeError("publish_date must be a datetime or 0")
 
         now = datetime.now(tz=publish_date.tzinfo) if publish_date.tzinfo else datetime.now()
         if publish_date <= now:
-            raise ValueError("定时发布时间必须晚于当前时间")
+            raise ValueError("The scheduled publishing time must be later than the current time")
 
         min_publish_time = now + cls.MIN_SCHEDULE_LEAD_TIME
         if publish_date <= min_publish_time:
-            raise ValueError("定时发布时间必须大于当前时间 2 小时")
+            raise ValueError("The scheduled publishing time must be at least 2 hours after the current time")
 
         return publish_date

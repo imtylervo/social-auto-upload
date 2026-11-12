@@ -1,49 +1,49 @@
-# 运行前提
+# Runtime requirements
 
-这个 skill 默认假设当前环境已经具备：
+This skill assumes the current environment already has:
 
-- 已安装 `social-auto-upload`
-- 可以调用 `sau`，或者至少可以执行 `python sau_cli.py`
-- 当前机器首次运行时可以联网访问 GitHub Release
+- `social-auto-upload` installed
+- `sau` can be called, or at least `python sau_cli.py` can be run
+- On the first run, the machine can go online and reach GitHub Releases
 
-## 关键说明
+## Key points
 
-用户不需要自己安装 `biliup`。
+The user does not need to install `biliup` themselves.
 
-当你执行 `sau bilibili ...` 时：
+When you run `sau bilibili ...`:
 
-- 如果本地没有 `biliup`，程序会自动下载
-- 如果上游 GitHub Release 有更新，程序会自动更新后再继续执行
+- If `biliup` is not present locally, the program downloads it automatically
+- If the upstream GitHub Release has an update, the program updates it automatically before continuing
 
-## 推荐调用方式
+## Recommended ways to call it
 
-### `sau` 已在 PATH 中
+### `sau` is already on PATH
 
 ```bash
 sau bilibili --help
 ```
 
-### 仓库内直接调用
+### Call it directly from the repository
 
-PowerShell：
+PowerShell:
 
 ```powershell
 .\.venv\Scripts\python.exe sau_cli.py bilibili --help
 ```
 
-bash / zsh：
+bash / zsh:
 
 ```bash
 python sau_cli.py bilibili --help
 ```
 
-## 首次运行注意事项
+## Notes for the first run
 
-- 首次运行可能比其他平台更慢，因为要自动准备 `biliup`
-- 如果网络无法访问 GitHub Release，Bilibili 命令会失败
-- 一旦本地已经准备好 `biliup`，后续命令会直接复用
-- `sau bilibili login --account <name>` 需要用户自己在本地真实终端里执行
-- 如果终端二维码显示不完整，通常可以直接打开当前目录下的 `qrcode.png` 扫码
-- 如果国内网络访问 GitHub Release 较慢，可先用 `https://gh-proxy.com/` 或 `https://gh-proxy.org/` 辅助访问对应 release 地址排障
-- 示例：
+- The first run may be slower than on other platforms, because `biliup` is prepared automatically
+- If the network cannot reach GitHub Releases, Bilibili commands fail
+- Once `biliup` is ready locally, later commands reuse it directly
+- `sau bilibili login --account <name>` must be run by the user in a real local terminal
+- If the terminal QR code is displayed incompletely, you can usually open `qrcode.png` in the current directory and scan it
+- If GitHub Releases is slow to reach from mainland China, you can first use `https://gh-proxy.com/` or `https://gh-proxy.org/` to help reach the release address for troubleshooting
+- Example:
   - `https://gh-proxy.org/https://github.com/biliup/biliup/releases/download/v1.1.29/biliupR-v1.1.29-aarch64-linux.tar.xz`

@@ -1,4 +1,4 @@
-"""定时参数在上传前校验；平台时间必须独立读回，不能只相信 UI 已选中。"""
+"""Schedule arguments are validated before upload; the platform's time must be read back independently, not trusted because the UI shows it selected."""
 import unittest
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
@@ -34,25 +34,25 @@ class DayuScheduleTests(unittest.TestCase):
     def test_outside_range_rejected_without_rounding(self):
         for delta in (timedelta(minutes=-5), timedelta(hours=1, minutes=55),
                       timedelta(days=7, minutes=5)):
-            with self.subTest(delta=delta), self.assertRaisesRegex(ValueError, "2 小时后至 7 天内"):
+            with self.subTest(delta=delta), self.assertRaisesRegex(ValueError, "between 2 hours and 7 days from now"):
                 validate_dayu_schedule(self.now + delta, self.now)
 
     def test_minute_precision_and_step_rejected_without_rounding(self):
         value = self.now + timedelta(days=1)
         for field in ({"minute": 1}, {"second": 1}, {"microsecond": 1}):
-            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "5 分钟一档"):
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "5-minute steps"):
                 validate_dayu_schedule(value.replace(**field), self.now)
 
     def test_invalid_types_and_naive_reference_clock_rejected(self):
-        with self.assertRaisesRegex(ValueError, "必须为 datetime"):
+        with self.assertRaisesRegex(ValueError, "must be a datetime"):
             validate_dayu_schedule("2027-01-01 10:30", self.now)
-        with self.assertRaisesRegex(ValueError, "必须包含时区"):
+        with self.assertRaisesRegex(ValueError, "must include a time zone"):
             validate_dayu_schedule(self.now + timedelta(days=1), self.now.replace(tzinfo=None))
 
     def test_invalid_schedule_rejected_before_reading_any_media(self):
         for app in (DayuArticle("测试文章标题", "missing.md", "missing.json", "AI生成", schedule=self.now),
                     DayuVideo("测试视频标题", "missing.mp4", [], "missing.json", "missing.png", "科技", "AI生成", schedule=self.now)):
-            with self.subTest(app=type(app).__name__), self.assertRaisesRegex(ValueError, "2 小时后"):
+            with self.subTest(app=type(app).__name__), self.assertRaisesRegex(ValueError, "between 2 hours"):
                 app.validate_upload_args()
 
 
@@ -62,7 +62,7 @@ class DayuScheduleReadbackTests(unittest.IsolatedAsyncioTestCase):
             ok=True, json=AsyncMock(return_value=data)))))
 
     async def test_original_draft_time_must_match_exactly(self):
-        # 查询已过去的安排也合法；校验范围只在新提交前进行。
+        # Querying a schedule that has already passed is valid too; the range is only checked before a new submission.
         target = datetime(2026, 1, 1, 10, 30, tzinfo=DAYU_TIMEZONE)
         data = {"draft_id": "original", "is_timed_release": True, "time_for_release": target.timestamp() * 1000}
         result = await read_dayu_schedule(self.context(data), "original", target.isoformat())
@@ -71,7 +71,7 @@ class DayuScheduleReadbackTests(unittest.IsolatedAsyncioTestCase):
                       {"is_timed_release": False}, {"time_for_release": True}, {"draft_id": "wrong"}):
             with self.subTest(field=field), self.assertRaises(RuntimeError):
                 await read_dayu_schedule(self.context(dict(data, **field)), "original", target.isoformat())
-        with self.assertRaisesRegex(RuntimeError, "立即发布"):
+        with self.assertRaisesRegex(RuntimeError, "publish-now"):
             await read_dayu_schedule(self.context(data), "original", None)
         self.assertEqual(await read_dayu_schedule(self.context(dict(data, is_timed_release=False)), "original", None), {})
 
@@ -91,14 +91,14 @@ class DayuScheduleReadbackTests(unittest.IsolatedAsyncioTestCase):
                     self.assertTrue(result["success"])
                     self.assertEqual(context.request.get.await_count, 1)
                     browser.new_context.assert_not_awaited()
-            # 实测视频提交初期 status=3，但安排已保存；无需等待审核转成 status=5。
+            # Observed: right after a video is submitted status=3 while the schedule is already saved; no need to wait for review to turn it into status=5.
             context = self.context({"dataList": {"data": [dict(record, status=3)], "totalPage": 1}})
             pending = await verify(context, None, {}, content_id="123", schedule=expected)
             self.assertTrue(pending["success"])
             self.assertEqual(pending["status"], "scheduled")
             for extra in ({}, {"time_for_release": epoch + 60000}):
                 context = self.context({"dataList": {"data": [dict(record, _app_extra=extra)], "totalPage": 1}})
-                with self.assertRaisesRegex(RuntimeError, "缺少|不一致"):
+                with self.assertRaisesRegex(RuntimeError, "no saved schedule|does not match"):
                     await verify(context, None, {}, content_id="123", schedule=expected)
 
 
@@ -115,7 +115,7 @@ class DayuScheduleBrowserTests(unittest.IsolatedAsyncioTestCase):
         await self.playwright.stop()
 
     async def test_native_picker_ignores_hidden_copy_and_crosses_year(self):
-        # 复现原生组件的可见副本、mask 入口及逐级选择，不直接给 input/Vue 模型赋目标时间。
+        # Reproduce the native component's visible copy, mask entry and step-by-step selection; do not assign the target time straight to the input/Vue model.
         await self.page.set_content('''<meta charset="utf-8"><style>.w-radio{width:18px;height:18px;display:inline-block}</style>
             <div hidden><div class="article-write_radio"><div class="w-radio"></div>定时发布</div></div>
             <div class="article-write_radio"><div id="toggle" class="w-radio w-radio_checked"></div>定时发布<span>说明</span></div>

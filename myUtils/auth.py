@@ -17,24 +17,24 @@ async def cookie_auth_douyin(account_file):
         browser = await playwright.chromium.launch(headless=LOCAL_CHROME_HEADLESS)
         context = await browser.new_context(storage_state=account_file)
         context = await set_init_script(context)
-        # 创建一个新的页面
+        # Create a new page
         page = await context.new_page()
-        # 访问指定的 URL
+        # Open the given URL
         await page.goto("https://creator.douyin.com/creator-micro/content/upload")
         try:
             await page.wait_for_url("https://creator.douyin.com/creator-micro/content/upload", timeout=5000)
-            # 2024.06.17 抖音创作者中心改版
-            # 判断
-            # 等待“扫码登录”元素出现，超时 5 秒（如果 5 秒没出现，说明 cookie 有效）
+            # 2024.06.17 Douyin creator center redesign
+            # Check
+            # Wait for the "扫码登录" (QR-code login) element, timeout 5 s (if it does not appear within 5 s, the cookie is valid)
             try:
                 await page.get_by_text("扫码登录").wait_for(timeout=5000)
-                douyin_logger.error("[+] cookie 失效，需要扫码登录")
+                douyin_logger.error("[+] cookie expired, QR-code login required")
                 return False
             except:
-                douyin_logger.success("[+]  cookie 有效")
+                douyin_logger.success("[+]  cookie valid")
                 return True
         except:
-            douyin_logger.error("[+] 等待5秒 cookie 失效")
+            douyin_logger.error("[+] waited 5 seconds, cookie expired")
             await context.close()
             await browser.close()
             return False
@@ -45,16 +45,16 @@ async def cookie_auth_tencent(account_file):
         browser = await playwright.chromium.launch(headless=LOCAL_CHROME_HEADLESS)
         context = await browser.new_context(storage_state=account_file)
         context = await set_init_script(context)
-        # 创建一个新的页面
+        # Create a new page
         page = await context.new_page()
-        # 访问指定的 URL
+        # Open the given URL
         await page.goto("https://channels.weixin.qq.com/platform/post/create")
         try:
-            await page.wait_for_selector('div.title-name:has-text("微信小店")', timeout=5000)  # 等待5秒
-            tencent_logger.error("[+] 等待5秒 cookie 失效")
+            await page.wait_for_selector('div.title-name:has-text("微信小店")', timeout=5000)  # wait 5 seconds; "微信小店" = WeChat Shop
+            tencent_logger.error("[+] waited 5 seconds, cookie expired")
             return False
         except:
-            tencent_logger.success("[+] cookie 有效")
+            tencent_logger.success("[+] cookie valid")
             return True
 
 
@@ -63,17 +63,17 @@ async def cookie_auth_ks(account_file):
         browser = await playwright.chromium.launch(headless=LOCAL_CHROME_HEADLESS)
         context = await browser.new_context(storage_state=account_file)
         context = await set_init_script(context)
-        # 创建一个新的页面
+        # Create a new page
         page = await context.new_page()
-        # 访问指定的 URL
+        # Open the given URL
         await page.goto("https://cp.kuaishou.com/article/publish/video")
         try:
-            await page.wait_for_selector("div.names div.container div.name:text('机构服务')", timeout=5000)  # 等待5秒
+            await page.wait_for_selector("div.names div.container div.name:text('机构服务')", timeout=5000)  # wait 5 seconds; "机构服务" = Agency services
 
-            kuaishou_logger.info("[+] 等待5秒 cookie 失效")
+            kuaishou_logger.info("[+] waited 5 seconds, cookie expired")
             return False
         except:
-            kuaishou_logger.success("[+] cookie 有效")
+            kuaishou_logger.success("[+] cookie valid")
             return True
 
 
@@ -82,38 +82,38 @@ async def cookie_auth_xhs(account_file):
         browser = await playwright.chromium.launch(headless=LOCAL_CHROME_HEADLESS)
         context = await browser.new_context(storage_state=account_file)
         context = await set_init_script(context)
-        # 创建一个新的页面
+        # Create a new page
         page = await context.new_page()
-        # 访问指定的 URL
+        # Open the given URL
         await page.goto("https://creator.xiaohongshu.com/creator-micro/content/upload")
         try:
             await page.wait_for_url("https://creator.xiaohongshu.com/creator-micro/content/upload", timeout=5000)
         except:
-            print("[+] 等待5秒 cookie 失效")
+            print("[+] waited 5 seconds, cookie expired")
             await context.close()
             await browser.close()
             return False
-        # 2024.06.17 抖音创作者中心改版
+        # 2024.06.17 Douyin creator center redesign
         if await page.get_by_text('手机号登录').count() or await page.get_by_text('扫码登录').count():
-            print("[+] 等待5秒 cookie 失效")
+            print("[+] waited 5 seconds, cookie expired")
             return False
         else:
-            print("[+] cookie 有效")
+            print("[+] cookie valid")
             return True
 
 
 async def check_cookie(type, file_path):
     match type:
-        # 小红书
+        # Xiaohongshu
         case 1:
             return await cookie_auth_xhs(Path(BASE_DIR / "cookiesFile" / file_path))
-        # 视频号
+        # WeChat Channels
         case 2:
             return await cookie_auth_tencent(Path(BASE_DIR / "cookiesFile" / file_path))
-        # 抖音
+        # Douyin
         case 3:
             return await cookie_auth_douyin(Path(BASE_DIR / "cookiesFile" / file_path))
-        # 快手
+        # Kuaishou
         case 4:
             return await cookie_auth_ks(Path(BASE_DIR / "cookiesFile" / file_path))
         case _:

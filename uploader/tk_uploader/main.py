@@ -17,17 +17,17 @@ async def cookie_auth(account_file):
         browser = await playwright.firefox.launch(headless=LOCAL_CHROME_HEADLESS)
         context = await browser.new_context(storage_state=account_file)
         context = await set_init_script(context)
-        # 创建一个新的页面
+        # Create a new page
         page = await context.new_page()
-        # 访问指定的 URL
+        # Open the given URL
         await page.goto("https://www.tiktok.com/tiktokstudio/upload?lang=en")
         await page.wait_for_load_state('networkidle')
         try:
-            # 选择所有的 select 元素
+            # Select all select elements
             select_elements = await page.query_selector_all('select')
             for element in select_elements:
                 class_name = await element.get_attribute('class')
-                # 使用正则表达式匹配特定模式的 class 名称
+                # Match class names of a specific pattern with a regex
                 if re.match(r'tiktok-.*-SelectFormContainer.*', class_name):
                     tiktok_logger.error("[+] cookie expired")
                     return False
@@ -65,7 +65,7 @@ async def get_tiktok_cookie(account_file):
         page = await context.new_page()
         await page.goto("https://www.tiktok.com/login?lang=en")
         await page.pause()
-        # 点击调试器的继续，保存cookie
+        # Click Resume in the debugger to save the cookie
         await context.storage_state(path=account_file)
 
 
@@ -82,7 +82,7 @@ class TiktokVideo(object):
 
     async def set_schedule_time(self, page, publish_date):
         schedule_input_element = self.locator_base.get_by_label('Schedule')
-        await schedule_input_element.wait_for(state='visible')  # 确保按钮可见
+        await schedule_input_element.wait_for(state='visible')  # Make sure the button is visible
 
         await schedule_input_element.click()
         scheduled_picker = self.locator_base.locator('div.scheduled-picker')
@@ -124,8 +124,8 @@ class TiktokVideo(object):
         # pick hour first
         await self.locator_base.locator(hour_selector).click()
         # click time button again
-        # 等待某个特定的元素出现或状态变化，表明UI已更新
-        await page.wait_for_timeout(1000)  # 等待500毫秒
+        # Wait for a specific element to appear or a state change, showing the UI has updated
+        await page.wait_for_timeout(1000)  # Wait 500 ms
         await scheduled_picker.locator('div.TUXInputBox').nth(0).click()
         # pick minutes after
         await self.locator_base.locator(minute_selector).click()
@@ -162,7 +162,7 @@ class TiktokVideo(object):
 
         upload_button = self.locator_base.locator(
             'button:has-text("Select video"):visible')
-        await upload_button.wait_for(state='visible')  # 确保按钮可见
+        await upload_button.wait_for(state='visible')  # Make sure the button is visible
 
         async with page.expect_file_chooser() as fc_info:
             await upload_button.click()
@@ -197,10 +197,10 @@ class TiktokVideo(object):
 
         await page.keyboard.press("End")
 
-        await page.wait_for_timeout(1000)  # 等待1秒
+        await page.wait_for_timeout(1000)  # Wait 1 second
 
         await page.keyboard.insert_text(self.title)
-        await page.wait_for_timeout(1000)  # 等待1秒
+        await page.wait_for_timeout(1000)  # Wait 1 second
         await page.keyboard.press("End")
 
         await page.keyboard.press("Enter")
@@ -209,10 +209,10 @@ class TiktokVideo(object):
         for index, tag in enumerate(self.tags, start=1):
             tiktok_logger.info("Setting the %s tag" % index)
             await page.keyboard.press("End")
-            await page.wait_for_timeout(1000)  # 等待1秒
+            await page.wait_for_timeout(1000)  # Wait 1 second
             await page.keyboard.insert_text("#" + tag + " ")
             await page.keyboard.press("Space")
-            await page.wait_for_timeout(1000)  # 等待1秒
+            await page.wait_for_timeout(1000)  # Wait 1 second
 
             await page.keyboard.press("Backspace")
             await page.keyboard.press("End")

@@ -1,10 +1,10 @@
 # Agent Bootstrap Prompt
 
-这份文档是写给 `OpenClaw`、`Codex`、`Claude Code / cc` 这类 agent 客户端用户的。
+This document is for users of agent clients such as `OpenClaw`, `Codex` and `Claude Code / cc`.
 
-目标不是让 agent 先通读整个仓库，而是先把 `social-auto-upload` 安装到可运行、可验证、可继续执行任务的状态。
+The goal is not to make the agent read the whole repository first. It is to get `social-auto-upload` installed in a state where it runs, can be verified, and can go on to execute tasks.
 
-当前主线已接入的平台：
+Platforms currently supported on the main line:
 
 - `bilibili`
 - `douyin`
@@ -12,32 +12,32 @@
 - `xiaohongshu`
 - `dayu`
 
-## 这份文档解决什么问题
+## What this document solves
 
-现在仓库里已经有：
+The repository already has:
 
-- 安装说明
-- CLI 文档
-- 平台 skill
+- Installation guide
+- CLI documentation
+- Platform skills
 
-但这些内容更偏向“agent 进入仓库之后怎么执行”。
+But those mostly cover how an agent should act once it is inside the repository.
 
-这份文档补的是“用户第一次把仓库交给 agent 客户端时，应该怎么说”。
+This document covers what the user should say the first time they hand the repository to an agent client.
 
-## 推荐使用方式
+## Recommended usage
 
-1. 把整个仓库给你的 agent 客户端。
-2. 把下面这段启动提示词完整发给它。
-3. 等 agent 完成安装和 CLI 验证后，再继续给它下达登录、上传、定时发布等任务。
+1. Give the whole repository to your agent client.
+2. Send it the starting prompt below in full.
+3. After the agent finishes the installation and CLI verification, give it tasks such as login, upload and scheduled publishing.
 
-## 通用启动提示词
+## Generic starting prompt
 
-复制下面整段，发给你的 agent：
+Copy the whole block below and send it to your agent:
 
 ```text
-你现在在一个名为 `social-auto-upload` 的仓库中工作。
+You are now working in a repository named `social-auto-upload`.
 
-这是一个多平台社交媒体自动发布项目。当前主线已经接入：
+This is a multi-platform social media auto-publishing project. The main line currently supports:
 
 - bilibili
 - douyin
@@ -45,107 +45,107 @@
 - xiaohongshu
 - dayu
 
-你的第一目标不是通读全部源码，也不是优先运行历史 examples，而是先把项目安装到“可运行、可验证、可继续执行任务”的状态。
+Your first goal is not to read all the source code, and not to run the legacy examples first. It is to get the project installed in a state where it runs, can be verified, and can go on to execute tasks.
 
-请遵守以下规则：
+Follow these rules:
 
-1. 默认把仓库根目录视为当前工作目录。
-2. 优先使用 `uv` 管理 Python 环境，不要默认回退到旧的 `requirements.txt`。
-3. 优先使用当前主线 CLI：`sau`。
-4. 优先参考这些文档：
+1. Treat the repository root as the current working directory by default.
+2. Prefer `uv` for managing the Python environment. Do not fall back to the old `requirements.txt` by default.
+3. Prefer the current main-line CLI: `sau`.
+4. Prefer these documents:
    - `docs/install.md`
    - `docs/CLI.md`
    - `docs/update.md`
-5. 如果需要平台级操作，优先参考这些 skill：
+5. For platform-level operations, prefer these skills:
    - `skills/douyin-upload/`
    - `skills/kuaishou-upload/`
    - `skills/xiaohongshu-upload/`
    - `skills/bilibili-upload/`
    - `skills/dayu-upload/`
-6. 不要默认走历史 `examples/` 和旧 Web 路径，除非当前 CLI 主线不可用。
-7. 如果登录流程生成二维码图片，不要只返回图片路径；请直接展示图片，或者明确告诉我该打开哪个本地图片文件扫码。
-8. 如果是 Bilibili 登录，不要在非交互环境里强行代跑；应改为指导我在本地真实终端执行。
-9. 安装完成后，请优先验证以下命令：
+6. Do not use the legacy `examples/` and the old Web path by default, unless the main-line CLI is unusable.
+7. If the login flow generates a QR code image, do not just return the image path. Show the image directly, or tell me clearly which local image file to open and scan.
+8. For Bilibili login, do not force it through in a non-interactive environment. Instead, guide me to run it in a real local terminal.
+9. After installation, verify these commands first:
    - `sau --help`
    - `sau douyin --help`
    - `sau kuaishou --help`
    - `sau xiaohongshu --help`
    - `sau bilibili --help`
-10. 完成后，请明确输出：
-   - 你实际执行了哪些命令
-   - 哪些验证通过了
-   - 当前项目是否已经进入“可继续登录/上传”的状态
-   - 推荐我下一步执行什么
+10. When done, output clearly:
+   - Which commands you actually ran
+   - Which checks passed
+   - Whether the project is now ready to continue with login/upload
+   - What you recommend I do next
 
-如果过程中遇到错误，不要跳过，请先说明错误，再给出你准备采取的下一步动作。
+If you hit an error, do not skip it. State the error first, then say what you plan to do next.
 ```
 
-## 安装完成后，你可以继续怎么说
+## What to say after installation
 
-下面这些是你可以继续发给 agent 的任务示例。
+Here are example tasks you can send to the agent next.
 
-### 做一次平台登录
-
-```text
-请继续帮我登录小红书账号，使用有头模式，账号名用 `creator`。
-```
+### Log in to a platform
 
 ```text
-请继续帮我登录抖音账号，使用无头模式，账号名用 `creator`。
-```
-
-### 做一次 CLI 可用性检查
-
-```text
-请检查 bilibili、douyin、kuaishou、xiaohongshu 四个平台的 CLI 入口是否都可用，并告诉我缺什么依赖。
-```
-
-### 做一次真实上传
-
-```text
-请使用 xiaohongshu CLI，帮我上传一个图文草稿，使用定时发布，不要立即发布。
+Please log in to my Xiaohongshu account in headed mode, with the account name `creator`.
 ```
 
 ```text
-请使用 douyin CLI，帮我上传一个视频，优先走当前主线，不要走历史 example。
+Please log in to my Douyin account in headless mode, with the account name `creator`.
 ```
 
-## OpenClaw / Codex / Claude Code 使用建议
+### Check that the CLI is usable
+
+```text
+Please check whether the CLI entries for bilibili, douyin, kuaishou and xiaohongshu all work, and tell me which dependencies are missing.
+```
+
+### Do a real upload
+
+```text
+Please use the xiaohongshu CLI to upload an image post draft, using scheduled publishing, not immediate publishing.
+```
+
+```text
+Please use the douyin CLI to upload a video. Use the current main line, not the legacy example.
+```
+
+## Tips for OpenClaw / Codex / Claude Code
 
 ### OpenClaw
 
-- 适合直接粘贴上面的完整启动提示词
-- 如果支持把仓库作为工作目录挂载进去，优先先挂载仓库，再发提示词
-- 如果支持本地文件展示，登录二维码应让 agent 直接展示图片
+- Paste the full starting prompt above directly
+- If it can mount the repository as the working directory, mount the repository first, then send the prompt
+- If it supports showing local files, have the agent show the login QR code image directly
 
 ### Codex
 
-- 建议先让它完成 bootstrap，再继续发平台任务
-- 让它优先使用 `docs/install.md`、`docs/CLI.md` 和 `skills/`
-- 不要让它一开始自由探索整个仓库，否则容易走到历史路径
+- Have it finish the bootstrap first, then send platform tasks
+- Have it use `docs/install.md`, `docs/CLI.md` and `skills/` first
+- Do not let it explore the whole repository freely at the start, or it may wander into legacy paths
 
 ### Claude Code / cc
 
-- 建议先让仓库成为当前 workspace
-- 再发完整启动提示词
-- 后续按“安装 -> 验证 -> 登录 -> 上传”顺序继续给任务
+- Make the repository the current workspace first
+- Then send the full starting prompt
+- After that, give tasks in the order "install -> verify -> log in -> upload"
 
-## 为什么不按平台拆四套提示词
+## Why there are not four per-platform prompts
 
-因为这个项目现在已经有统一的 CLI 主线。
+Because the project now has one unified CLI main line.
 
-用户第一次把仓库交给 agent 时，更需要的是：
+When a user first hands the repository to an agent, what matters more is that:
 
-- agent 知道主入口是什么
-- agent 知道应该优先走哪条路径
-- agent 知道哪些是历史路径
-- agent 安装完成后先给出明确验收结果
+- The agent knows what the main entry is
+- The agent knows which path to prefer
+- The agent knows which paths are legacy
+- The agent gives a clear acceptance result once installation is done
 
-等进入执行阶段，再让 agent 根据你的实际目标去选择：
+Once the work phase starts, let the agent choose, based on your actual goal, among:
 
 - `bilibili`
 - `douyin`
 - `kuaishou`
 - `xiaohongshu`
 
-这样比给用户准备四套平台 prompt 更稳，也更容易维护。
+This is more stable than preparing four per-platform prompts, and easier to maintain.

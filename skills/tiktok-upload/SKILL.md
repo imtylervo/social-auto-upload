@@ -1,20 +1,20 @@
 ---
 name: tiktok-upload
-description: 使用仓库现有 Patchright/Playwright Chrome 上传器登录并发布 TikTok 视频。Use when 用户要发布 TikTok 视频，且当前环境可访问本仓库及其本地 Chrome 配置。
+description: Use the repository's existing Patchright/Playwright Chrome uploader to log in and publish TikTok videos. Use when the user wants to publish a TikTok video and the current environment can access this repository and its local Chrome configuration.
 license: MIT-0
 slug: social-auto-upload-tiktok-upload
-displayName: TikTok 视频发布
+displayName: TikTok video publishing
 version: 1.0.0
-summary: 使用仓库 Chrome 上传器登录并发布 TikTok 视频。
+summary: Log in and publish TikTok videos with the repository's Chrome uploader.
 ---
 
-# TikTok 视频发布
+# TikTok video publishing
 
-TikTok 当前没有 `sau tiktok` 命令。使用仓库的 `uploader/tk_uploader/main_chrome.py`，不能虚构 CLI 参数。运行前确认仓库依赖、`conf.py` 中的 Chrome 配置及用户提供的视频路径。
+TikTok currently has no `sau tiktok` command. Use the repository's `uploader/tk_uploader/main_chrome.py`; do not invent CLI arguments. Before running, confirm the repository dependencies, the Chrome configuration in `conf.py` and the video path provided by the user.
 
-账号会话存放在 `cookies/tk_uploader/account.json`。首次登录可参考 `examples/get_tk_cookie.py`，在 TikTok 页面由用户本人完成登录。不要读取、复制或提交 cookie 文件。
+The account session is stored in `cookies/tk_uploader/account.json`. For the first login, see `examples/get_tk_cookie.py`; the user logs in personally on the TikTok page. Do not read, copy or commit the cookie file.
 
-单条视频优先按下面的仓库 API 流程执行，先用 `publish_date=0` 表示立即发布：
+For a single video, prefer the repository API flow below, using `publish_date=0` to mean publish immediately:
 
 ```python
 import asyncio
@@ -29,6 +29,6 @@ app = TiktokVideo("标题", str(video_file), ["标签"], 0, str(account_file))
 asyncio.run(app.main())
 ```
 
-`TiktokVideo` 没有独立简介参数。定时发布需传入明确的 `datetime`，不要自行推算时间。仓库中的 `examples/upload_video_to_tiktok.py` 会批量处理目录下的 MP4、自动从文件提取标题/标签，并安排次日 16:00 发布；除非用户明确要求这些行为，不要直接运行该脚本。
+`TiktokVideo` has no separate description parameter. For scheduled publishing, pass an explicit `datetime`; do not work out the time yourself. The repository's `examples/upload_video_to_tiktok.py` processes all MP4 files in a directory in bulk, extracts the title and tags from the files automatically, and schedules publishing for 16:00 the next day. Do not run that script directly unless the user explicitly asks for these behaviors.
 
-每次发布前让用户确认账号、单条视频、标题、标签及立即/定时方式。页面布局或登录状态不符合预期时停止并报告；只有平台页面确认提交后才报告成功，未知结果先核查 TikTok Studio，不能直接重发。
+Before each publish, have the user confirm the account, the single video, the title, the tags and whether to publish immediately or on a schedule. If the page layout or login state is not as expected, stop and report. Report success only after the platform page confirms the submission; for an unknown result, check TikTok Studio first and do not resend directly.

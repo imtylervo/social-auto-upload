@@ -1,33 +1,33 @@
-## 启动项目：
-python 版本：3.10
-1. 安装依赖
+## Starting the project
+Python version: 3.10
+1. Install the dependencies
     pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-2. 删除 db 目录下 database.db（如果没有直接运行createTable.py即可），运行 createTable.py 重新建库，避免出现脏数据
-3. 修改 conf.py最下方 LOCAL_CHROME_PATH 为本地 chrome 浏览器地址
-4. 运行根目录的 sau_backend.py
-5. type字段（平台标识） 1 小红书 2 视频号 3 抖音 4 快手
-## 接口说明
+2. Delete database.db in the db directory (if it does not exist, just run createTable.py), then run createTable.py to rebuild the database, so no dirty data is left
+3. Change LOCAL_CHROME_PATH at the bottom of conf.py to the path of your local Chrome browser
+4. Run sau_backend.py in the repo root
+5. The type field (platform id): 1 Xiaohongshu, 2 WeChat Channels, 3 Douyin, 4 Kuaishou
+## API
 1. /upload post
-    上传接口，上传成功会返回文件的唯一id，后期靠这个发布视频
-2. /login id参数 用户名 type参数 平台标识：登录流程，前端和后端建立sse连接，后端获取到图片base64编码后返回给前端，前端接受扫码后后端存库后返回200，前端主动断开连接，然后调取/getValidAccounts获取当前所有可用账号
-3. /getValidAccounts 会获取当前所有可用cookie，时间较慢，会逐个校验cookie，status 1 有效 0 无效cookie
-4. /postVideo 发布视频接口 post json传参
-    file_list      /upload获取的文件唯一标识
-    account_list   /getValidAccounts获取的filePath字段
-    type           类型字段（平台标识）
-    title          视频标题
-    tags           视频tag 列表，不带#
-    category       原作者说是原创表示，0表示不是原创其他表示为原创，但测试该字段没有效果
-    enableTimer    是否开启定时发布，默认关闭，开启传True，如果开启，下面三个必传，否则不传
-    videos_per_day 每天发布几个视频
-    daily_times    每天发布视频的时间，整形列表，与上面列表长度保持一致
-    start_days     开始天数，0 代表明天开始定时发布 1 代表明天的明天
-    以上三个字段是我的理解，不知道对不对，也不知道原作者为什么要这么设置
-## 数据库说明
-见当前目录下 db目录，py文件是创建脚本，db文件是sqlite数据库
-## 文件说明
-cookiesFile文件夹 存储cookie文件
-myUtils文件夹 存储自己封装的python模块
-videoFile文件夹 文件上传存放位置
-web 文件夹 web路由目录
-conf.py 全局配置，记得修改配置中 LOCAL_CHROME_PATH 为本机浏览器地址
+    Upload endpoint. On success it returns the file's unique id, which is used later to publish the video
+2. /login, parameter id: user name, parameter type: platform id. Login flow: the frontend and backend open an SSE connection; the backend gets the QR image as base64 and returns it to the frontend; after the QR code is scanned the backend saves the account and returns 200; the frontend closes the connection and then calls /getValidAccounts to get all accounts that can be used
+3. /getValidAccounts returns all cookies that are currently valid. It is slow, because it checks every cookie one by one. status 1 = valid, 0 = invalid cookie
+4. /postVideo publishes videos, post with JSON parameters
+    file_list      the unique file ids returned by /upload
+    account_list   the filePath field returned by /getValidAccounts
+    type           type field (platform id)
+    title          video title
+    tags           list of video tags, without #
+    category       the original author says this marks original content: 0 means not original, anything else means original, but in testing the field had no effect
+    enableTimer    whether scheduled publishing is on; off by default, pass True to turn it on. If it is on, the three fields below are required, otherwise leave them out
+    videos_per_day how many videos to publish per day
+    daily_times    the times of day to publish, a list of integers, the same length as the list above
+    start_days     start day: 0 means scheduled publishing starts tomorrow, 1 means the day after tomorrow
+    The three fields above are described as I understand them; I am not sure this is right, nor why the original author set it up this way
+## Database
+See the db directory under the current directory: the .py file is the creation script, the .db file is the SQLite database
+## Files
+cookiesFile folder: stores cookie files
+myUtils folder: stores the project's own Python modules
+videoFile folder: where uploaded files are stored
+web folder: web routes
+conf.py: global configuration; remember to change LOCAL_CHROME_PATH in it to the path of the browser on this machine

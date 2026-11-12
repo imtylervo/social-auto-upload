@@ -18,17 +18,17 @@ async def cookie_auth(account_file):
         browser = await playwright.chromium.launch(headless=LOCAL_CHROME_HEADLESS)
         context = await browser.new_context(storage_state=account_file)
         context = await set_init_script(context)
-        # 创建一个新的页面
+        # Create a new page
         page = await context.new_page()
-        # 访问指定的 URL
+        # Open the given URL
         await page.goto("https://www.tiktok.com/tiktokstudio/upload?lang=en")
         await page.wait_for_load_state('networkidle')
         try:
-            # 选择所有的 select 元素
+            # Select all select elements
             select_elements = await page.query_selector_all('select')
             for element in select_elements:
                 class_name = await element.get_attribute('class')
-                # 使用正则表达式匹配特定模式的 class 名称
+                # Match class names of a specific pattern with a regex
                 if re.match(r'tiktok-.*-SelectFormContainer.*', class_name):
                     tiktok_logger.error("[+] cookie expired")
                     return False
@@ -66,7 +66,7 @@ async def get_tiktok_cookie(account_file):
         page = await context.new_page()
         await page.goto("https://www.tiktok.com/login?lang=en")
         await page.pause()
-        # 点击调试器的继续，保存cookie
+        # Click Resume in the debugger to save the cookie
         await context.storage_state(path=account_file)
 
 
@@ -102,7 +102,7 @@ class TiktokVideo(object):
 
     async def set_schedule_time(self, page, publish_date):
         schedule_input_element = self.locator_base.get_by_label('Schedule')
-        await schedule_input_element.wait_for(state='visible')  # 确保按钮可见
+        await schedule_input_element.wait_for(state='visible')  # Make sure the button is visible
 
         await schedule_input_element.click(force=True)
         if await self.locator_base.locator('div.TUXButton-content >> text=Allow').count():
@@ -146,10 +146,10 @@ class TiktokVideo(object):
         minute_selector = f"span.tiktok-timepicker-right:has-text('{minute_str}')"
 
         # pick hour first
-        await page.wait_for_timeout(1000)  # 等待500毫秒
+        await page.wait_for_timeout(1000)  # Wait 500 ms
         await self.locator_base.locator(hour_selector).click()
         # click time button again
-        await page.wait_for_timeout(1000)  # 等待500毫秒
+        await page.wait_for_timeout(1000)  # Wait 500 ms
         # pick minutes after
         await self.locator_base.locator(minute_selector).click()
 
@@ -216,7 +216,7 @@ class TiktokVideo(object):
 
         upload_button = self.locator_base.locator(
             'button:has-text("Select video"):visible')
-        await upload_button.wait_for(state='visible')  # 确保按钮可见
+        await upload_button.wait_for(state='visible')  # Make sure the button is visible
 
         async with page.expect_file_chooser() as fc_info:
             await upload_button.click()
@@ -309,10 +309,10 @@ class TiktokVideo(object):
 
         await page.keyboard.press("End")
 
-        await page.wait_for_timeout(1000)  # 等待1秒
+        await page.wait_for_timeout(1000)  # Wait 1 second
 
         await page.keyboard.insert_text(self.title)
-        await page.wait_for_timeout(1000)  # 等待1秒
+        await page.wait_for_timeout(1000)  # Wait 1 second
         await page.keyboard.press("End")
 
         await page.keyboard.press("Enter")
@@ -321,10 +321,10 @@ class TiktokVideo(object):
         for index, tag in enumerate(self.tags, start=1):
             tiktok_logger.info("Setting the %s tag" % index)
             await page.keyboard.press("End")
-            await page.wait_for_timeout(1000)  # 等待1秒
+            await page.wait_for_timeout(1000)  # Wait 1 second
             await page.keyboard.insert_text("#" + tag + " ")
             await page.keyboard.press("Space")
-            await page.wait_for_timeout(1000)  # 等待1秒
+            await page.wait_for_timeout(1000)  # Wait 1 second
 
             await page.keyboard.press("Backspace")
             await page.keyboard.press("End")
@@ -345,7 +345,7 @@ class TiktokVideo(object):
         await page.goto("https://www.tiktok.com")
         await page.wait_for_load_state('domcontentloaded')
         await page.wait_for_selector('[data-e2e="nav-more-menu"]')
-        # 已经设置为英文, 省略这个步骤
+        # Already set to English, skip this step
         if await page.locator('[data-e2e="nav-more-menu"]').text_content() == "More":
             return
 

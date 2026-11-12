@@ -1,9 +1,9 @@
-"""把主题排版转成大鱼号保存接口和预览均能保留的 HTML 表现属性。"""
+"""Convert theme layout into HTML presentation attributes that both the Dayu save API and the preview keep."""
 from patchright.async_api import Page
 
 
 async def render_dayu_compatible_html(page: Page, html: str, images: list[str]) -> dict:
-    """保留文字和图片顺序，以 font/table 属性表达颜色、背景和近似字号，不把正文转成图片。"""
+    """Keep the order of text and images; express colors, backgrounds and approximate font sizes with font/table attributes, without turning the body into images."""
     return await page.evaluate("""({html, images}) => {
         const root = document.createElement('div'); root.innerHTML = html;
         const sourceImages = root.querySelectorAll('img');

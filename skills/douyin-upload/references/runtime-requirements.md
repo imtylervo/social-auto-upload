@@ -1,67 +1,67 @@
-# 运行前提
+# Runtime requirements
 
-这个 skill 默认假设当前环境已经具备：
+This skill assumes the current environment already has:
 
-- 已安装 `social-auto-upload`
-- 可以调用 `sau` 命令，或至少有等效调用方式
-- 已为 `patchright` 安装 Chromium
+- `social-auto-upload` installed
+- The `sau` command callable, or at least an equivalent way to call it
+- Chromium installed for `patchright`
 
-## 推荐安装方式
+## Recommended installation
 
-在项目根目录执行：
+Run from the project root:
 
 ```bash
 uv pip install -e .
 ```
 
-## 安装 patchright 浏览器
+## Install the patchright browser
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 $env:PLAYWRIGHT_DOWNLOAD_HOST="https://npmmirror.com/mirrors/playwright"; patchright install chromium
 ```
 
-Linux / macOS（bash / zsh）：
+Linux / macOS (bash / zsh):
 
 ```bash
 PLAYWRIGHT_DOWNLOAD_HOST="https://npmmirror.com/mirrors/playwright" patchright install chromium
 ```
 
-## 常见调用方式
+## Common ways to call it
 
-### 如果 `sau` 已经在 PATH 中
+### If `sau` is already on PATH
 
 ```bash
 sau douyin --help
 ```
 
-### 如果虚拟环境存在，但还没有激活
+### If the virtual environment exists but is not activated
 
-PowerShell：
+PowerShell:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 sau douyin --help
 ```
 
-### 如果你想直接调用可执行文件
+### If you want to call the executable directly
 
-PowerShell：
+PowerShell:
 
 ```powershell
 .\.venv\Scripts\sau.exe douyin --help
 ```
 
-### 如果你更倾向于使用 uv
+### If you prefer uv
 
 ```bash
 uv run sau douyin --help
 ```
 
-## 无头和有头模式
+## Headless and headed modes
 
-- 使用 `--headless` 表示无头模式
-- 使用 `--headed` 表示有头模式
-- 如果用户明确要求无头登录，也要预期 CLI 会通过控制台输出或临时图片路径提供二维码相关提示
-- 如果登录过程中已经生成了本地二维码图片，agent 应优先直接把图片展示/发送给用户扫码，不要只告诉用户图片路径
+- Use `--headless` for headless mode
+- Use `--headed` for headed mode
+- If the user explicitly asks for headless login, expect the CLI to give QR-code hints through console output or a temporary image path
+- If a local QR code image was generated during login, the agent should show or send the image to the user to scan, and not just tell the user the image path

@@ -1,1 +1,1 @@
-"""Meta 平台发布实现，按 Facebook 个人主页和 Facebook Page 页面流程分层。"""
+"""Meta platform publishing, split into the Facebook personal profile flow and the Facebook Page flow."""

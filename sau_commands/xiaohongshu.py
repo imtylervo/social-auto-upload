@@ -1,4 +1,4 @@
-"""xiaohongshu 的命令参数与执行逻辑。"""
+"""Command arguments and execution logic for xiaohongshu."""
 from __future__ import annotations
 import sys
 from dataclasses import dataclass
@@ -24,7 +24,7 @@ from sau_commands.arguments import (
 
 
 def register(platform_parsers):
-    """声明本平台命令、参数及合法选项。"""
+    """Declare this platform's commands, arguments and allowed options."""
     schedule_help = SCHEDULE_FORMAT.replace("%", "%%")
     xiaohongshu_parser = platform_parsers.add_parser("xiaohongshu", help="Xiaohongshu operations")
     xiaohongshu_actions = xiaohongshu_parser.add_subparsers(dest="action", required=True)
@@ -143,7 +143,7 @@ async def upload_xiaohongshu_note(request: XiaohongshuNoteUploadRequest) -> Path
 
 
 async def run(args):
-    """执行本平台命令；发布结果由平台实现核验。"""
+    """Run this platform's command; the platform implementation verifies the publish result."""
     if args.action == "login":
         result = await login_xiaohongshu_account(args.account, headless=args.headless)
         if not result["success"]:
@@ -163,7 +163,7 @@ async def run(args):
     if args.action == "upload-video":
         parsed_tags = parse_tags(args.tags)
         if len(parsed_tags) > 10:
-            print(f"错误：小红书标签最多 10 个，当前提供了 {len(parsed_tags)} 个: {parsed_tags}", file=sys.stderr)
+            print(f"Error: Xiaohongshu allows at most 10 tags, {len(parsed_tags)} given: {parsed_tags}", file=sys.stderr)
             return 1
         request = XiaohongshuVideoUploadRequest(
             account_name=args.account,
@@ -184,7 +184,7 @@ async def run(args):
     if args.action == "upload-note":
         parsed_tags = parse_tags(args.tags)
         if len(parsed_tags) > 10:
-            print(f"错误：小红书标签最多 10 个，当前提供了 {len(parsed_tags)} 个: {parsed_tags}", file=sys.stderr)
+            print(f"Error: Xiaohongshu allows at most 10 tags, {len(parsed_tags)} given: {parsed_tags}", file=sys.stderr)
             return 1
         request = XiaohongshuNoteUploadRequest(
             account_name=args.account,

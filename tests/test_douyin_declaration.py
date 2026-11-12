@@ -52,7 +52,7 @@ class DouyinDeclarationTests(unittest.TestCase):
             declaration="已确认声明原文",
         )
         video.set_self_declaration = AsyncMock(return_value=False)
-        with self.assertRaisesRegex(RuntimeError, "自主声明"):
+        with self.assertRaisesRegex(RuntimeError, "self-declaration"):
             asyncio.run(video.apply_self_declaration(object()))
 
     def test_declaration_failure_closes_browser_resources(self):

@@ -1,88 +1,88 @@
-# 安装说明
+# Installation
 
-这个文档分成两部分：
+This document has two parts:
 
-- `For Humans`：给正常使用仓库的开发者、创作者、CLI 用户看
-- `For AI Agents`：给 OpenClaw、Codex、Claude Code 一类 agent 看
+- `For Humans`: for developers, creators and CLI users who use the repository directly
+- `For AI Agents`: for agents such as OpenClaw, Codex and Claude Code
 
-如果你是“正在使用 agent 客户端的人”，想先给 agent 一段启动提示词，而不是直接阅读下面的执行细节，先看：
+If you are a person who uses an agent client and want to give the agent a starting prompt first, instead of reading the execution details below, read this first:
 
 - [Agent Bootstrap Prompt](./agent-bootstrap.md)
 
 ## For Humans
 
-### 1. 克隆项目
+### 1. Clone the project
 
 ```bash
 git clone https://github.com/dreammis/social-auto-upload.git
 cd social-auto-upload
 ```
 
-### 2. 创建虚拟环境
+### 2. Create a virtual environment
 
-推荐使用 `uv`：
+`uv` is recommended:
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 uv venv
 .venv\Scripts\activate
 ```
 
-Linux / macOS：
+Linux / macOS:
 
 ```bash
 uv venv
 source .venv/bin/activate
 ```
 
-### 3. 安装主线依赖
+### 3. Install the main dependencies
 
-当前主线依赖已经放到 `pyproject.toml`，推荐直接执行：
+The current main dependencies are declared in `pyproject.toml`. Run:
 
 ```bash
 uv pip install -e .
 ```
 
-安装完成后，会注册 `sau` 命令。
+After installation, the `sau` command is registered.
 
-### 4. 安装 patchright Chromium
+### 4. Install patchright Chromium
 
-当前主线使用 `patchright` 驱动浏览器。
+The current main line uses `patchright` to drive the browser.
 
-国内用户推荐先指定镜像，再安装 Chromium。
+Users in China should set a mirror first, then install Chromium.
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 $env:PLAYWRIGHT_DOWNLOAD_HOST="https://npmmirror.com/mirrors/playwright"; patchright install chromium
 ```
 
-Linux / macOS：
+Linux / macOS:
 
 ```bash
 PLAYWRIGHT_DOWNLOAD_HOST="https://npmmirror.com/mirrors/playwright" patchright install chromium
 ```
 
-### 5. 配置 conf.py
+### 5. Configure conf.py
 
-复制一份配置：
+Copy the example config:
 
 ```bash
 cp conf.example.py conf.py
 ```
 
-Windows 也可以直接手动复制并重命名。
+On Windows you can also copy and rename the file by hand.
 
-当前通常还会用到这些配置项：
+These settings are usually also needed:
 
 - `LOCAL_CHROME_PATH`
 - `LOCAL_CHROME_HEADLESS`
 - `DEBUG_MODE`
 
-`XHS_SERVER` 目前只和小红书旧流程相关。
+`XHS_SERVER` is only used by the old Xiaohongshu flow.
 
-### 6. 验证 CLI 是否可用
+### 6. Check that the CLI works
 
 ```bash
 sau --help
@@ -92,108 +92,108 @@ sau xiaohongshu --help
 sau bilibili --help
 ```
 
-如果命令找不到，优先确认：
+If the command is not found, check these first:
 
-- 当前虚拟环境是否已激活
-- 是否执行过 `uv pip install -e .`
+- Whether the virtual environment is activated
+- Whether `uv pip install -e .` has been run
 
-### 7. 抖音主线示例
+### 7. Douyin example
 
 ```bash
 sau douyin login --account <account_name>
 sau douyin check --account <account_name>
-sau douyin upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介"
-图文正文1:
-$noteText = @"图文正文"@    
-sau douyin upload-note --account <account_name> --images videos/demo1.png videos/demo2.png --title "图文标题" --note $noteText --tags 'tag1,tag2'
-图文正文2:
-sau douyin upload-note --account <account_name> --images videos/demo1.png videos/demo2.png --title "图文标题" --notef '图文文件路径' --tags 'tag1,tag2'
-添加 BGM（可选）:
-sau douyin upload-note --account <account_name> --images videos/demo1.png videos/demo2.png --title "图文标题" --note $noteText --tags 'tag1,tag2' --bgm '音乐名称'
+sau douyin upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description"
+Image post body, option 1:
+$noteText = @"Image post body"@    
+sau douyin upload-note --account <account_name> --images videos/demo1.png videos/demo2.png --title "Image post title" --note $noteText --tags 'tag1,tag2'
+Image post body, option 2:
+sau douyin upload-note --account <account_name> --images videos/demo1.png videos/demo2.png --title "Image post title" --notef 'path to the body text file' --tags 'tag1,tag2'
+Add BGM (optional):
+sau douyin upload-note --account <account_name> --images videos/demo1.png videos/demo2.png --title "Image post title" --note $noteText --tags 'tag1,tag2' --bgm 'music name'
 ``` 
 
-抖音短信验证码补充说明：
+Notes on the Douyin SMS verification code:
 
-- 视频发布过程中如果触发短信二次验证，程序会优先读取项目根目录下的 `verify_code.txt`
-- 如果当前是你手动运行的交互式终端，没提供 `verify_code.txt` 时，CLI 会直接提示你在终端输入验证码
-- 如果是 agent 或自动化桥接场景，仍然可以继续通过写入 `verify_code.txt` 来提供验证码
-- 验证通过后，程序会自动删除 `verify_code.txt`
+- If SMS two-step verification is triggered while publishing a video, the program first reads `verify_code.txt` in the project root
+- If you are running in an interactive terminal yourself and `verify_code.txt` is not provided, the CLI prompts you to type the code in the terminal
+- In an agent or automation bridge scenario, you can still provide the code by writing it to `verify_code.txt`
+- After verification succeeds, the program deletes `verify_code.txt` automatically
 
-抖音卡login手动获取cookie:
+If Douyin login gets stuck, get the cookie manually:
 
-- 目标服务器使用vnc
-- 浏览器登录抖音创作者中心https://creator.douyin.com/
-- 执行`bash export_douyin_cookie.sh --account <account_name>`
-- 检查cookie可用性,执行`sau douyin check --account <account_name>`
+- The target server uses VNC
+- Log in to the Douyin creator center in a browser: https://creator.douyin.com/
+- Run `bash export_douyin_cookie.sh --account <account_name>`
+- Check that the cookie works: `sau douyin check --account <account_name>`
 
-### 8. 快手主线示例
+### 8. Kuaishou example
 
 ```bash
 sau kuaishou login --account <account_name>
 sau kuaishou check --account <account_name>
-sau kuaishou upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介"
-sau kuaishou upload-note --account <account_name> --images videos/demo1.png videos/demo2.png videos/demo.png --title "图文标题" --note "图文正文"
+sau kuaishou upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description"
+sau kuaishou upload-note --account <account_name> --images videos/demo1.png videos/demo2.png videos/demo.png --title "Image post title" --note "Image post body"
 ```
 
-### 9. 小红书主线示例
+### 9. Xiaohongshu example
 
 ```bash
 sau xiaohongshu login --account <account_name>
 sau xiaohongshu check --account <account_name>
-sau xiaohongshu upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介"
-sau xiaohongshu upload-note --account <account_name> --images videos/demo1.png videos/demo2.png videos/demo.png --title "图文标题" --note "图文正文"
+sau xiaohongshu upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description"
+sau xiaohongshu upload-note --account <account_name> --images videos/demo1.png videos/demo2.png videos/demo.png --title "Image post title" --note "Image post body"
 ```
 
-### 10. Bilibili 主线示例
+### 10. Bilibili example
 
 ```bash
 sau bilibili login --account <account_name>
 sau bilibili check --account <account_name>
-sau bilibili upload-video --account <account_name> --file videos/demo.mp4 --title "示例标题" --desc "示例简介" --tid 249
+sau bilibili upload-video --account <account_name> --file videos/demo.mp4 --title "Sample title" --desc "Sample description" --tid 249
 ```
 
-补充说明：
+Additional notes:
 
-- `creator` 之类的名字只是示例值，真正传的是用户自定义的 `account_name`
-- 一个 `account_name` 对应一个账号文件，可以准备多个账号并发使用
-- 浏览器平台统一元数据约定：
-- 视频使用 `title + desc + tags`
-- 图文使用 `title + note + tags`
-- 用户不需要手动安装 `biliup`
-- 首次运行 Bilibili 相关命令时，程序会自动下载 `biliup`
-- 后续运行会自动检查上游 release 并自动更新
-- Bilibili 登录建议由用户自己在本地真实终端里执行；如果终端里的二维码显示不完整，可直接打开当前目录下的 `qrcode.png` 扫码
-- 如果国内网络访问 GitHub Release 较慢，可先用 `https://gh-proxy.com/` 或 `https://gh-proxy.org/` 辅助访问对应 release 地址排障
-- 示例：
+- Names such as `creator` are only example values. What you actually pass is your own `account_name`
+- One `account_name` maps to one account file. You can prepare several accounts and use them concurrently
+- Shared metadata convention for the browser platforms:
+- Videos use `title + desc + tags`
+- Image posts use `title + note + tags`
+- Users do not need to install `biliup` by hand
+- The first time a Bilibili command runs, the program downloads `biliup` automatically
+- Later runs check the upstream release and update automatically
+- It is best for the user to run Bilibili login in a real local terminal. If the QR code is not fully displayed in the terminal, open `qrcode.png` in the current directory and scan it
+- If GitHub Releases are slow to reach from China, you can use `https://gh-proxy.com/` or `https://gh-proxy.org/` to help reach the release URL when troubleshooting
+- Example:
   - `https://gh-proxy.org/https://github.com/biliup/biliup/releases/download/v1.1.29/biliupR-v1.1.29-aarch64-linux.tar.xz`
 
 ## For AI Agents
 
-如果你是一个可执行命令的 agent，请优先按下面顺序处理：
+If you are an agent that can run commands, handle things in this order:
 
-1. 先假设仓库根目录就是当前工作目录
-2. 优先使用 `uv` 管理环境，不要默认回退到旧的 `requirements.txt`
-3. 安装命令优先使用：
+1. Assume the repository root is the current working directory
+2. Prefer `uv` for managing the environment. Do not fall back to the old `requirements.txt` by default
+3. Prefer this install command:
 
 ```bash
 uv pip install -e .
 ```
 
-4. 如需浏览器驱动，优先使用：
+4. If a browser driver is needed, prefer:
 
-Windows PowerShell：
+Windows PowerShell:
 
 ```powershell
 $env:PLAYWRIGHT_DOWNLOAD_HOST="https://npmmirror.com/mirrors/playwright"; patchright install chromium
 ```
 
-Linux / macOS：
+Linux / macOS:
 
 ```bash
 PLAYWRIGHT_DOWNLOAD_HOST="https://npmmirror.com/mirrors/playwright" patchright install chromium
 ```
 
-5. 安装完成后，优先检查：
+5. After installation, check these first:
 
 ```bash
 sau --help
@@ -203,7 +203,7 @@ sau xiaohongshu --help
 sau bilibili --help
 ```
 
-6. 如果用户的目标是抖音或快手的登录、cookie 校验、视频上传、图文上传，优先走 CLI：
+6. If the user wants to log in to Douyin or Kuaishou, check cookies, upload videos or upload image posts, use the CLI first:
 
 ```bash
 sau douyin login
@@ -226,7 +226,7 @@ sau bilibili check
 sau bilibili upload-video
 ```
 
-7. 如果用户明确在使用 skill 系统，再引导其阅读：
+7. If the user is explicitly using the skill system, point them to:
 
 - `skills/douyin-upload/SKILL.md`
 - `skills/douyin-upload/references/cli-contract.md`
@@ -237,15 +237,15 @@ sau bilibili upload-video
 - `skills/bilibili-upload/SKILL.md`
 - `skills/bilibili-upload/references/cli-contract.md`
 
-### 对 agent 的额外说明
+### Extra notes for agents
 
-- 当登录流程生成本地二维码图片时，不要只把图片路径发给用户
-- 这类二维码图片本身就是给用户扫码的，agent 应优先直接展示/发送本地图片给用户扫码
-- 如果环境支持查看本地图片，优先用查看图片能力把二维码展示出来；路径只作为补充信息
-- Bilibili 登录当前不建议 agent 在非交互环境里直接代跑
-- 正确做法是让用户自己在本地终端执行 `sau bilibili login --account <name>`；如果二维码显示不完整，再提示用户打开 `qrcode.png`
-- `requirements.txt` 目前是历史兼容文件，不是主安装入口
-- `uploader/` 是核心实现目录
-- `sau_cli.py` 是当前 CLI 主入口
-- `docs/legacy-web.md` 是历史 Web 版本说明，不保证当前可用
-- Bilibili 首次运行时可能自动下载 `biliup`
+- When the login flow generates a local QR code image, do not just send the image path to the user
+- The QR code image is meant to be scanned by the user. The agent should show or send the local image to the user directly
+- If the environment can view local images, use that to display the QR code. Give the path only as extra information
+- Do not run Bilibili login for the user in a non-interactive environment
+- The right approach is to ask the user to run `sau bilibili login --account <name>` in a local terminal. If the QR code is not fully displayed, tell the user to open `qrcode.png`
+- `requirements.txt` is currently a legacy compatibility file, not the main install entry
+- `uploader/` is the core implementation directory
+- `sau_cli.py` is the current main CLI entry
+- `docs/legacy-web.md` describes the legacy Web version and is not guaranteed to work now
+- Bilibili may download `biliup` automatically on first run

@@ -45,10 +45,10 @@ def _msg(emoji: str, text: str) -> str:
 
 
 async def _js_click_by_text(page: Page, text: str) -> bool:
-    """用 JS 找到文字完全匹配的最内层元素并点击它及其祖先（绕过 span pointer-events:none / 遮罩拦截）。
+    """Use JS to find the innermost element whose text matches exactly and click it and its ancestors (works around span pointer-events:none and blocking overlays).
 
-    小红书很多可点项文字在 <span class="d-text"> 里，pointer-events 常被禁用，
-    Playwright 常规 click 会超时。用原生 click 冒泡触发 Vue 事件更可靠。
+    On Xiaohongshu many clickable items keep their text in <span class="d-text">, where pointer-events is often disabled,
+    so a normal Playwright click times out. A native click that bubbles up to trigger the Vue events is more reliable.
     """
     return await page.evaluate(
         """(t) => {
@@ -113,7 +113,7 @@ async def _find_xhs_qrcode_locator(page: Page):
     if await qrcode_img.count():
         return qrcode_img
 
-    raise RuntimeError("未在扫一扫登录区域找到小红书二维码图片")
+    raise RuntimeError("Xiaohongshu QR code image not found in the scan-to-log-in area")
 
 
 async def _extract_xhs_qrcode_src(page: Page) -> str:
@@ -121,7 +121,7 @@ async def _extract_xhs_qrcode_src(page: Page) -> str:
     await qrcode_img.wait_for(state="visible", timeout=30000)
     qrcode_src = await qrcode_img.get_attribute("src")
     if not qrcode_src:
-        raise RuntimeError("未获取到小红书登录二维码地址")
+        raise RuntimeError("Could not get the Xiaohongshu login QR code URL")
     return qrcode_src
 
 
@@ -143,14 +143,14 @@ async def _save_xhs_qrcode(
 
     if previous_qrcode_path and previous_qrcode_path != qrcode_path:
         if remove_qrcode_file(previous_qrcode_path):
-            xiaohongshu_logger.info(_msg("🧹", f"临时二维码文件已清理: {previous_qrcode_path}"))
+            xiaohongshu_logger.info(_msg("🧹", f"Temporary QR code file removed: {previous_qrcode_path}"))
 
-    xiaohongshu_logger.info(_msg("🖼️", f"二维码已经准备好啦，已保存到: {qrcode_path}"))
+    xiaohongshu_logger.info(_msg("🖼️", f"QR code is ready, saved to: {qrcode_path}"))
     qrcode_content = decode_qrcode_from_path(qrcode_path)
     if qrcode_content:
         print_terminal_qrcode(qrcode_content, qrcode_path, "小红书APP")
     else:
-        xiaohongshu_logger.warning(_msg("😵", f"终端没法完整显示二维码，请打开 {qrcode_path} 扫码"))
+        xiaohongshu_logger.warning(_msg("😵", f"The terminal cannot show the whole QR code; open {qrcode_path} and scan it"))
 
     qrcode_info = {
         "image_path": str(qrcode_path),
@@ -195,22 +195,22 @@ async def cookie_auth(account_file):
             await page.wait_for_timeout(3000)
 
             if page.url.startswith(_build_xhs_creator_url("/login")):
-                xiaohongshu_logger.info(_msg("🥹", "cookie 已失效，得重新登录一下"))
+                xiaohongshu_logger.info(_msg("🥹", "Cookie is invalid; you need to log in again"))
                 return False
 
             login_box = page.locator(XHS_LOGIN_BOX_SELECTOR).first
             if await login_box.count():
                 try:
                     if await login_box.is_visible():
-                        xiaohongshu_logger.info(_msg("🥹", "页面仍然停留在登录二维码页，按 cookie 失效处理"))
+                        xiaohongshu_logger.info(_msg("🥹", "The page is still on the login QR code page; treating the cookie as invalid"))
                         return False
                 except Exception:
                     return False
 
-            xiaohongshu_logger.success(_msg("🥳", "cookie 有效"))
+            xiaohongshu_logger.success(_msg("🥳", "Cookie is valid"))
             return True
         except Exception as exc:
-            xiaohongshu_logger.warning(_msg("😵", f"cookie 校验时出错，按失效处理: {exc}"))
+            xiaohongshu_logger.warning(_msg("😵", f"Error while checking the cookie, treating it as invalid: {exc}"))
             return False
         finally:
             await browser.close()
@@ -227,7 +227,7 @@ async def xiaohongshu_setup(
         if not handle:
             result = _build_login_result(False, "cookie_invalid", "cookie文件不存在或已失效", account_file)
             return result if return_detail else False
-        xiaohongshu_logger.info(_msg("🥹", "cookie 失效了，准备打开浏览器重新登录"))
+        xiaohongshu_logger.info(_msg("🥹", "Cookie is invalid; opening a browser to log in again"))
         result = await xiaohongshu_cookie_gen(
             account_file,
             qrcode_callback=qrcode_callback,
@@ -247,7 +247,7 @@ async def xiaohongshu_cookie_gen(
     headless: bool = LOCAL_CHROME_HEADLESS,
 ):
     if headless:
-        xiaohongshu_logger.info(_msg("🖼️", "小红书登录将以无头模式运行，小人会输出终端二维码并保存本地二维码图片"))
+        xiaohongshu_logger.info(_msg("🖼️", "Xiaohongshu login runs headless; the QR code will be printed in the terminal and saved as a local image"))
 
     account_path = Path(account_file)
     account_path.parent.mkdir(parents=True, exist_ok=True)
@@ -264,14 +264,14 @@ async def xiaohongshu_cookie_gen(
             await page.goto(_build_xhs_creator_url("/login"))
             qrcode_info = await _save_xhs_qrcode(page, account_file, qrcode_callback=qrcode_callback)
             qrcode_path = Path(qrcode_info["image_path"])
-            xiaohongshu_logger.info(_msg("🧍", "请扫码，小人正在耐心等待登录完成"))
+            xiaohongshu_logger.info(_msg("🧍", "Scan the QR code; waiting for login to finish"))
 
             for _ in range(max_checks):
                 if await _is_xhs_login_completed(page):
                     await asyncio.sleep(2)
                     await context.storage_state(path=account_file)
                     if await cookie_auth(account_file):
-                        xiaohongshu_logger.success(_msg("🥳", "小红书扫码登录成功，小人开心收工"))
+                        xiaohongshu_logger.success(_msg("🥳", "Xiaohongshu QR-code login succeeded, all done"))
                         result = _build_login_result(True, "success", "小红书扫码登录成功", account_file, qrcode_info, page.url)
                     else:
                         result = _build_login_result(
@@ -298,9 +298,9 @@ async def xiaohongshu_cookie_gen(
             result = _build_login_result(False, "failed", str(exc), account_file, current_url=page.url if "page" in locals() else "")
         finally:
             if remove_qrcode_file(qrcode_path):
-                xiaohongshu_logger.info(_msg("🧹", f"临时二维码文件已清理: {qrcode_path}"))
+                xiaohongshu_logger.info(_msg("🧹", f"Temporary QR code file removed: {qrcode_path}"))
             if not result["success"]:
-                xiaohongshu_logger.error(_msg("😢", f"登录失败: {result['message']}"))
+                xiaohongshu_logger.error(_msg("😢", f"Login failed: {result['message']}"))
             await context.close()
             await browser.close()
         return result
@@ -325,15 +325,15 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
 
     async def validate_base_args(self):
         if not os.path.exists(self.account_file):
-            raise RuntimeError(f"cookie文件不存在，请先完成小红书登录: {self.account_file}")
+            raise RuntimeError(f"Cookie file does not exist; log in to Xiaohongshu first: {self.account_file}")
         if not await cookie_auth(self.account_file):
-            raise RuntimeError(f"cookie文件已失效，请先完成小红书登录: {self.account_file}")
+            raise RuntimeError(f"Cookie file is no longer valid; log in to Xiaohongshu first: {self.account_file}")
 
         if self.publish_strategy not in {
             XIAOHONGSHU_PUBLISH_STRATEGY_IMMEDIATE,
             XIAOHONGSHU_PUBLISH_STRATEGY_SCHEDULED,
         }:
-            raise ValueError(f"不支持的发布策略: {self.publish_strategy}")
+            raise ValueError(f"Unsupported publish strategy: {self.publish_strategy}")
 
         if self.publish_strategy == XIAOHONGSHU_PUBLISH_STRATEGY_SCHEDULED:
             self.publish_date = self.validate_publish_date(self.publish_date)
@@ -341,7 +341,7 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
             self.publish_date = 0
 
     async def set_schedule_time_xiaohongshu(self, page: Page, publish_date: datetime):
-        xiaohongshu_logger.info(_msg("🕒", f"小人准备设置定时发布时间: {publish_date.strftime(self.date_format)}"))
+        xiaohongshu_logger.info(_msg("🕒", f"Setting the scheduled publishing time: {publish_date.strftime(self.date_format)}"))
         await page.locator('.custom-switch-card').filter(has_text="定时发布").locator('.d-switch').click()
         await asyncio.sleep(1)
         publish_date_hour = publish_date.strftime("%Y-%m-%d %H:%M")
@@ -353,7 +353,7 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
         if not location:
             return True
 
-        xiaohongshu_logger.info(_msg("📍", f"小人准备设置位置: {location}"))
+        xiaohongshu_logger.info(_msg("📍", f"Setting the location: {location}"))
         loc_ele = await page.wait_for_selector('div.d-text.d-select-placeholder.d-text-ellipsis.d-text-nowrap')
         await loc_ele.click()
         await page.wait_for_timeout(1000)
@@ -363,7 +363,7 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
         try:
             await page.wait_for_selector(dropdown_selector, timeout=3000)
         except Exception:
-            xiaohongshu_logger.warning(_msg("😵", "位置下拉列表没按预期出现，小人继续按旧逻辑查找"))
+            xiaohongshu_logger.warning(_msg("😵", "The location dropdown did not appear as expected; falling back to the old lookup"))
         await page.wait_for_timeout(1000)
         flexible_xpath = (
             f'//div[contains(@class, "d-popover") and contains(@class, "d-dropdown")]'
@@ -389,10 +389,10 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
 
             await location_option.scroll_into_view_if_needed()
             await location_option.click()
-            xiaohongshu_logger.success(_msg("🥳", f"位置已经设置成 {location}"))
+            xiaohongshu_logger.success(_msg("🥳", f"Location set to {location}"))
             return True
         except Exception as e:
-            xiaohongshu_logger.error(_msg("😢", f"设置位置失败: {e}"))
+            xiaohongshu_logger.error(_msg("😢", f"Failed to set the location: {e}"))
             try:
                 all_options = await page.query_selector_all(
                     '//div[contains(@class, "d-popover") and contains(@class, "d-dropdown")]'
@@ -400,12 +400,12 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
                     '//div[contains(@class, "d-grid") and contains(@class, "d-options")]'
                     '/div'
                 )
-                xiaohongshu_logger.debug(_msg("🧍", f"位置下拉里一共找到 {len(all_options)} 个选项"))
+                xiaohongshu_logger.debug(_msg("🧍", f"Found {len(all_options)} options in the location dropdown"))
                 for i, option in enumerate(all_options[:3]):
                     option_text = await option.inner_text()
-                    xiaohongshu_logger.debug(_msg("🧾", f"候选位置 {i + 1}: {option_text.strip()[:50]}"))
+                    xiaohongshu_logger.debug(_msg("🧾", f"Location option {i + 1}: {option_text.strip()[:50]}"))
             except Exception as inner_e:
-                xiaohongshu_logger.debug(_msg("😵", f"读取位置候选列表失败: {inner_e}"))
+                xiaohongshu_logger.debug(_msg("😵", f"Failed to read the location options: {inner_e}"))
             return False
 
     async def fill_title(self, page: Page) -> None:
@@ -428,11 +428,11 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
         if not getattr(self, "tags", None):
             return
 
-        # 小红书标签上限为 10 个，超过会导致死循环卡住发布
+        # Xiaohongshu allows at most 10 tags; more than that loops forever and stalls the publish
         max_tags = 10
         if len(self.tags) > max_tags:
             xiaohongshu_logger.warning(
-                _msg("🏷️", f"标签数量 {len(self.tags)} 超过小红书上限 {max_tags}，只取前 {max_tags} 个: {self.tags[:max_tags]}")
+                _msg("🏷️", f"{len(self.tags)} tags exceeds the Xiaohongshu limit of {max_tags}; using only the first {max_tags}: {self.tags[:max_tags]}")
             )
             self.tags = self.tags[:max_tags]
 
@@ -440,9 +440,9 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
             desc = page.locator('p[data-placeholder*="输入正文描述"]')
             await desc.click()
 
-        for tag in self.tags:  # 循环处理所有 tags
-            # 话题候选下拉框依赖小红书联想接口实时返回，网络抖动/无匹配时会等不到。
-            # 标签是可选增强项：等不到候选框就跳过该标签继续，不让整条发布因此失败。
+        for tag in self.tags:  # go through all tags
+            # The hashtag suggestion dropdown depends on Xiaohongshu's live suggestion API, so with network jitter or no match it may never appear.
+            # Tags are optional: if no suggestions appear, skip that tag and go on, so the whole publish does not fail because of it.
             try:
                 await page.keyboard.type("#" + tag, delay=30)
                 await page.locator('#creator-editor-topic-container').wait_for(
@@ -454,9 +454,9 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
                 await first_item.click()
             except Exception as exc:
                 xiaohongshu_logger.warning(
-                    _msg("🏷️", f"话题『{tag}』未出现候选，跳过该标签继续发布: {exc}")
+                    _msg("🏷️", f"No suggestions appeared for hashtag 『{tag}』; skipping this tag and continuing to publish: {exc}")
                 )
-                # 清掉已键入但未成词的 "#tag" 文本，避免它残留进正文
+                # Delete the typed "#tag" text that did not become a hashtag, so it does not stay in the text
                 for _ in range(len("#" + tag)):
                     await page.keyboard.press("Backspace")
                 continue
@@ -467,16 +467,16 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
         await self.fill_tags(page)
 
     async def check_original_declaration(self, page: Page) -> None:
-        """设置「来源转载」声明，填写转载来源。
+        """Set the 「来源转载」 (reposted from a source) declaration and fill in the source.
 
-        流程（对应 codegen 录制）：
-          点「添加内容类型声明」→ 点包含「来源转载」的 div
-          → 填 placeholder「请输入媒体名称」→ 点 button「确认」。
-        容错：任一步失败记 warning 跳过、继续发布，不中断。
+        Flow (matches the codegen recording):
+          click 「添加内容类型声明」 (Add content type declaration) → click the div containing 「来源转载」 (reposted from a source)
+          → fill the placeholder 「请输入媒体名称」 (enter media name) → click the 「确认」 (Confirm) button.
+        Error handling: if any step fails, log a warning, skip it and keep publishing without stopping.
         """
         source = getattr(self, "repost_source", "") or ""
         try:
-            # 1. 点「添加内容类型声明」
+            # 1. Click 「添加内容类型声明」 (Add content type declaration)
             trigger = page.get_by_text("添加内容类型声明", exact=False).first
             try:
                 await trigger.scroll_into_view_if_needed(timeout=5000)
@@ -485,7 +485,7 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
             await trigger.click(force=True)
             await page.wait_for_timeout(1500)
 
-            # 2. 选「来源转载」选项
+            # 2. Choose the 「来源转载」 (reposted from a source) option
             import re as _re
             repost_option = page.locator("#publish-container div").filter(
                 has_text=_re.compile(r"^来源转载$")
@@ -496,14 +496,14 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
                 await _js_click_by_text(page, "来源转载")
             await page.wait_for_timeout(1500)
 
-            # 3. 填写媒体名称
+            # 3. Fill in the media name
             source_input = page.get_by_placeholder("请输入媒体名称").first
             await source_input.wait_for(state="visible", timeout=8000)
             await source_input.click()
             await source_input.fill(source)
             await page.wait_for_timeout(500)
 
-            # 4. 点「确认」按钮
+            # 4. Click the 「确认」 (Confirm) button
             confirm = page.get_by_role("button", name="确认").first
             try:
                 await confirm.wait_for(state="visible", timeout=5000)
@@ -512,9 +512,9 @@ class XiaoHongShuBaseUploader(BaseVideoUploader):
                 await _js_click_by_text(page, "确认")
 
             await page.wait_for_timeout(1000)
-            xiaohongshu_logger.success(_msg("🧾", f"来源转载已声明（来源：{source}）"))
+            xiaohongshu_logger.success(_msg("🧾", f"Repost declared (source: {source})"))
         except Exception as exc:
-            xiaohongshu_logger.warning(_msg("⚠️", f"设置来源转载失败，跳过继续发布: {exc}"))
+            xiaohongshu_logger.warning(_msg("⚠️", f"Failed to set the repost declaration; skipping and continuing to publish: {exc}"))
             try:
                 await page.keyboard.press("Escape")
             except Exception:
@@ -551,25 +551,25 @@ class XiaoHongShuVideo(XiaoHongShuBaseUploader):
     async def validate_upload_args(self):
         await self.validate_base_args()
         if not self.title or not str(self.title).strip():
-            raise ValueError("视频模式下，title 是必须的")
+            raise ValueError("title is required in video mode")
 
         self.file_path = str(self.validate_video_file(self.file_path))
         if self.thumbnail_path:
             self.thumbnail_path = str(self.validate_image_file(self.thumbnail_path))
 
     async def handle_upload_error(self, page: Page):
-        xiaohongshu_logger.warning(_msg("😵", "视频上传摔了一跤，小人马上重新上传"))
+        xiaohongshu_logger.warning(_msg("😵", "Video upload failed; uploading again"))
         await page.locator('div.progress-div [class^="upload-btn-input"]').set_input_files(self.file_path)
 
     async def set_thumbnail(self, page: Page, thumbnail_path: str):
         if not thumbnail_path:
             return
 
-        xiaohongshu_logger.info(_msg("🖼️", "小人准备设置封面"))
+        xiaohongshu_logger.info(_msg("🖼️", "Setting the cover"))
 
-        # 封面设置为增强步骤：失败时记 warning 跳过、继续发布（用视频首帧兜底）。
+        # Setting the cover is optional: on failure, log a warning, skip it and keep publishing (the first video frame is the fallback).
         try:
-            # 发布页封面区域内嵌，点击 div.upload-cover 打开封面弹窗（d-modal）。
+            # The cover area is embedded in the publish page; clicking div.upload-cover opens the cover dialog (d-modal).
             cover_section = page.locator("text=设置封面").first
             try:
                 await cover_section.scroll_into_view_if_needed(timeout=5000)
@@ -577,27 +577,27 @@ class XiaoHongShuVideo(XiaoHongShuBaseUploader):
                 pass
             await page.wait_for_timeout(2000)
 
-            # 1. 点击 div.upload-cover 打开封面弹窗
+            # 1. Click div.upload-cover to open the cover dialog
             upload_cover = page.locator("div.upload-cover").first
             if not await upload_cover.count():
                 upload_cover = page.locator("div.cover-plugin-preview div.default.pointer").first
             await upload_cover.click(force=True)
             await page.wait_for_timeout(3000)
 
-            # 2. 切换到「上传封面」tab（默认在「截取封面」）
+            # 2. Switch to the 「上传封面」 (Upload cover) tab (the default is 「截取封面」 (Capture cover))
             upload_tab = page.get_by_text("上传封面", exact=True).first
             await upload_tab.wait_for(state="visible", timeout=10000)
             await upload_tab.click()
             await page.wait_for_timeout(2000)
 
-            # 3. 找到图片 file input（parent class: upload-wrapper）并上传
+            # 3. Find the image file input (parent class: upload-wrapper) and upload
             file_input = page.locator('div.upload-wrapper input[type="file"][accept*="image"]').first
             if not await file_input.count():
                 file_input = page.locator('input[type="file"][accept*="image"]').last
             await file_input.set_input_files(thumbnail_path)
-            await page.wait_for_timeout(4000)  # 等图片加载+裁剪渲染
+            await page.wait_for_timeout(4000)  # wait for the image to load and the crop view to render
 
-            # 4. 点「确定」按钮
+            # 4. Click the 「确定」 (OK) button
             modal_footer = page.locator("div.d-modal-footer")
             confirm = modal_footer.get_by_text("确定", exact=True).first
             if not await confirm.count():
@@ -605,15 +605,15 @@ class XiaoHongShuVideo(XiaoHongShuBaseUploader):
             await confirm.wait_for(state="visible", timeout=10000)
             await confirm.click()
 
-            # 5. 等弹窗关闭
+            # 5. Wait for the dialog to close
             modal = page.locator("div.d-modal")
             try:
                 await modal.first.wait_for(state="hidden", timeout=15000)
             except Exception:
                 pass
-            xiaohongshu_logger.success(_msg("🥳", "封面已经设置完成"))
+            xiaohongshu_logger.success(_msg("🥳", "Cover set"))
         except Exception as exc:
-            xiaohongshu_logger.warning(_msg("🖼️", f"封面设置失败，跳过该步骤继续发布（用视频首帧）：{exc}"))
+            xiaohongshu_logger.warning(_msg("🖼️", f"Failed to set the cover; skipping this step and continuing to publish (using the first video frame): {exc}"))
             try:
                 await page.keyboard.press("Escape")
                 await page.wait_for_timeout(500)
@@ -621,8 +621,8 @@ class XiaoHongShuVideo(XiaoHongShuBaseUploader):
                 pass
 
     async def upload_video_content(self, page: Page) -> None:
-        xiaohongshu_logger.info(_msg("🏃", f"小人开始搬运视频: {self.title}.mp4"))
-        xiaohongshu_logger.info(_msg("🧭", "小人正在赶往视频发布页"))
+        xiaohongshu_logger.info(_msg("🏃", f"Starting video upload: {self.title}.mp4"))
+        xiaohongshu_logger.info(_msg("🧭", "Opening the video publish page"))
         publish_url = _build_xhs_creator_url(
             "/publish/publish?from=homepage&target=video"
         )
@@ -636,12 +636,12 @@ class XiaoHongShuVideo(XiaoHongShuBaseUploader):
                 preview_new = await upload_input.query_selector(
                     'xpath=following-sibling::div[contains(@class, "preview-new")]')
                 if preview_new:
-                    # 获取整个预览区域的文本，更鲁棒地判断上传状态
+                    # Read the text of the whole preview area for a more robust check of the upload state
                     all_text = await preview_new.inner_text()
                     upload_success = any(keyword in all_text for keyword in ['上传成功', '分辨率', '重新上传', '编辑封面', '已上传', '已选择', '100%'])
                     
                     if not upload_success:
-                        # 检查是否有特定的状态码或百分比
+                        # Check for a specific status code or percentage
                         stage_elements = await preview_new.query_selector_all('div.stage')
                         for stage in stage_elements:
                             text_content = await page.evaluate('(element) => element.textContent', stage)
@@ -650,25 +650,25 @@ class XiaoHongShuVideo(XiaoHongShuBaseUploader):
                                 break
                     
                     if upload_success:
-                        xiaohongshu_logger.success(_msg("🥳", "视频已经传完啦"))
+                        xiaohongshu_logger.success(_msg("🥳", "Video upload finished"))
                         break
                     
                     if self.debug:
                         normalized_text = all_text.strip().replace("\n", " ")
-                        xiaohongshu_logger.debug(_msg("🧍", f"预览区域内容: {normalized_text}"))
-                    xiaohongshu_logger.debug(_msg("🧍", "还没看到上传成功标识，小人继续等一会"))
+                        xiaohongshu_logger.debug(_msg("🧍", f"Preview area content: {normalized_text}"))
+                    xiaohongshu_logger.debug(_msg("🧍", "No upload success marker yet; waiting a bit longer"))
                 else:
-                    # 尝试检查标题输入框是否已经出现，如果是，说明已经进入编辑状态
+                    # Check whether the title input has appeared; if so, the page is already in edit mode
                     title_container = page.locator('input[placeholder*="填写标题"]')
                     if await title_container.count() > 0 and await title_container.is_visible():
-                        xiaohongshu_logger.success(_msg("🥳", "虽然没看到预览区，但标题框出来了，小人继续"))
+                        xiaohongshu_logger.success(_msg("🥳", "No preview area, but the title box is there; continuing"))
                         break
-                    xiaohongshu_logger.debug(_msg("🧍", "还没拿到预览区域，小人继续等一会"))
+                    xiaohongshu_logger.debug(_msg("🧍", "Preview area not available yet; waiting a bit longer"))
             except Exception as e:
-                xiaohongshu_logger.debug(_msg("😵", f"上传状态还没稳定下来，小人继续观察: {e}"))
+                xiaohongshu_logger.debug(_msg("😵", f"Upload status has not settled yet; still watching: {e}"))
             await asyncio.sleep(2)
 
-        xiaohongshu_logger.info(_msg("✍️", "小人开始填标题、描述和话题"))
+        xiaohongshu_logger.info(_msg("✍️", "Filling in the title, description and hashtags"))
         await self.fill_meta(page)
 
         await self.set_thumbnail(page, self.thumbnail_path)
@@ -690,18 +690,18 @@ class XiaoHongShuVideo(XiaoHongShuBaseUploader):
                     XHS_PUBLISH_SUCCESS_URL_PATTERN,
                     timeout=3000
                 )
-                xiaohongshu_logger.success(_msg("🥳", "视频发布成功，小人开心收工"))
+                xiaohongshu_logger.success(_msg("🥳", "Video published successfully, all done"))
                 break
             except Exception:
-                xiaohongshu_logger.info(_msg("🏃", "小人正在冲刺发布视频"))
+                xiaohongshu_logger.info(_msg("🏃", "Publishing video..."))
                 if self.debug:
                     await page.screenshot(full_page=True)
                 await asyncio.sleep(0.5)
 
     async def upload(self, playwright: Playwright) -> None:
-        xiaohongshu_logger.info(_msg("🧍", "小人先检查 cookie、视频文件、封面和发布时间"))
+        xiaohongshu_logger.info(_msg("🧍", "Checking the cookie, video file, cover and publish time first"))
         await self.validate_upload_args()
-        xiaohongshu_logger.info(_msg("🥳", "上传前检查通过"))
+        xiaohongshu_logger.info(_msg("🥳", "Pre-upload checks passed"))
         browser = await playwright.chromium.launch(headless=self.headless, channel="chromium")
         context = await browser.new_context(
             permissions=["geolocation"],
@@ -713,7 +713,7 @@ class XiaoHongShuVideo(XiaoHongShuBaseUploader):
             page = await context.new_page()
             await self.upload_video_content(page)
             await context.storage_state(path=self.account_file)
-            xiaohongshu_logger.success(_msg("🥳", "cookie 更新完毕"))
+            xiaohongshu_logger.success(_msg("🥳", "Cookie updated"))
         finally:
             await context.close()
             await browser.close()
@@ -756,9 +756,9 @@ class XiaoHongShuNote(XiaoHongShuBaseUploader):
     async def validate_upload_args(self):
         await self.validate_base_args()
         if not self.image_paths:
-            raise ValueError("图文模式下，图片是必须的")
+            raise ValueError("Images are required in image post mode")
         if not self.title or not str(self.title).strip():
-            raise ValueError("图文模式下，title 是必须的")
+            raise ValueError("title is required in image post mode")
 
         if isinstance(self.image_paths, (str, Path)):
             self.image_paths = [self.image_paths]
@@ -769,8 +769,8 @@ class XiaoHongShuNote(XiaoHongShuBaseUploader):
         self.image_paths = normalized_image_paths
 
     async def upload_note_content(self, page: Page) -> None:
-        xiaohongshu_logger.info(_msg("🏃", f"小人开始搬运图文，共 {len(self.image_paths)} 张图片"))
-        xiaohongshu_logger.info(_msg("🧭", "小人正在赶往图文发布页"))
+        xiaohongshu_logger.info(_msg("🏃", f"Starting image post upload, {len(self.image_paths)} images"))
+        xiaohongshu_logger.info(_msg("🧭", "Opening the image post publish page"))
         publish_url = _build_xhs_creator_url(
             "/publish/publish?from=homepage&target=image"
         )
@@ -782,20 +782,20 @@ class XiaoHongShuNote(XiaoHongShuBaseUploader):
             upload_input = page.locator("div[class^='upload-content'] input[class='upload-input']").first
 
         await upload_input.wait_for(state="attached", timeout=30000)
-        xiaohongshu_logger.info(_msg("📤", "小人正在上传图片"))
+        xiaohongshu_logger.info(_msg("📤", "Uploading images..."))
         await upload_input.set_input_files(self.image_paths)
 
         while True:
             try:
                 title_container = page.locator('input[placeholder*="填写标题"]').first
                 await title_container.wait_for(state="visible", timeout=3000)
-                xiaohongshu_logger.success(_msg("🥳", "图文素材已经传完，可以开始填写内容了"))
+                xiaohongshu_logger.success(_msg("🥳", "Image post media uploaded; ready to fill in the content"))
                 break
             except Exception:
-                xiaohongshu_logger.debug(_msg("🧍", "图文素材还在上传，小人继续等一会"))
+                xiaohongshu_logger.debug(_msg("🧍", "Image post media still uploading; waiting a bit longer"))
                 await asyncio.sleep(1)
 
-        xiaohongshu_logger.info(_msg("✍️", "小人开始填标题、描述和话题"))
+        xiaohongshu_logger.info(_msg("✍️", "Filling in the title, description and hashtags"))
         await self.fill_meta(page)
 
         await self.check_original_declaration(page)
@@ -813,18 +813,18 @@ class XiaoHongShuNote(XiaoHongShuBaseUploader):
                     XHS_PUBLISH_SUCCESS_URL_PATTERN,
                     timeout=3000
                 )
-                xiaohongshu_logger.success(_msg("🥳", "图文发布成功，小人开心收工"))
+                xiaohongshu_logger.success(_msg("🥳", "Image post published successfully, all done"))
                 break
             except Exception:
-                xiaohongshu_logger.info(_msg("🏃", "小人正在冲刺发布图文"))
+                xiaohongshu_logger.info(_msg("🏃", "Publishing image post..."))
                 if self.debug:
                     await page.screenshot(full_page=True)
                 await asyncio.sleep(0.5)
 
     async def upload(self, playwright: Playwright) -> None:
-        xiaohongshu_logger.info(_msg("🧍", "小人先检查 cookie、图片和发布时间"))
+        xiaohongshu_logger.info(_msg("🧍", "Checking the cookie, images and publish time first"))
         await self.validate_upload_args()
-        xiaohongshu_logger.info(_msg("🥳", "图文上传前检查通过"))
+        xiaohongshu_logger.info(_msg("🥳", "Image post pre-upload checks passed"))
         browser = await playwright.chromium.launch(headless=self.headless, channel="chromium")
         context = await browser.new_context(
             permissions=["geolocation"],
@@ -836,7 +836,7 @@ class XiaoHongShuNote(XiaoHongShuBaseUploader):
             page = await context.new_page()
             await self.upload_note_content(page)
             await context.storage_state(path=self.account_file)
-            xiaohongshu_logger.success(_msg("🥳", "cookie 更新完毕"))
+            xiaohongshu_logger.success(_msg("🥳", "Cookie updated"))
         finally:
             await context.close()
             await browser.close()

@@ -1,4 +1,4 @@
-"""大鱼号正文的能力与素材限制；文件读取和渲染由共用文章模块负责。"""
+"""Capabilities and asset limits of the Dayu article body; file reading and rendering are handled by the shared article module."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,35 +14,35 @@ DAYU_ARTICLE_TAGS = {"section", "div", "span", "figure", "p", "br", "h1", "h2", 
 
 
 def load_dayu_article(content_file: str | Path, theme: str | None = None) -> ArticleDocument:
-    """共用主题渲染，保留原稿样式供大鱼号兼容转换，并在上传前校验平台能力。"""
+    """Render with the shared theme, keep the original styles for the Dayu compatibility conversion, and check platform capabilities before upload."""
     path = Path(content_file).expanduser().resolve()
     if path.suffix.lower() not in {".md", ".markdown"} and theme is not None:
-        raise ValueError("--theme 仅适用于 Markdown")
+        raise ValueError("--theme only applies to Markdown")
     document = load_article(path, theme)
     unsupported = set(document.tags) - DAYU_ARTICLE_TAGS
     if unsupported:
-        raise ValueError(f"大鱼号当前未支持这些格式: {', '.join(sorted(unsupported))}；请调整原稿")
-    # figure 在导入时适配为 div；图片数量与位置仍严格校验，布局容器不计作必须保留的语义格式。
+        raise ValueError(f"Dayu does not support these formats yet: {', '.join(sorted(unsupported))}; please adjust the source")
+    # figure is converted to div on import; image count and positions are still checked strictly, layout containers are not counted as semantic formatting that must be kept.
     document.manifest["formats"].pop("figure", None)
     text = "".join(document.text).strip()
     if len(text) > 20000:
-        raise ValueError(f"大鱼号正文最多 20000 字，当前 {len(text)} 字")
+        raise ValueError(f"Dayu article body allows at most 20000 characters, currently {len(text)}")
     for image in set(document.images):
         validate_dayu_article_image(image)
     return document
 
 
 def validate_dayu_article_image(image: str | Path) -> Path:
-    """图文正文和封面共用页面观察到的单张 5M 限制，并拒绝无法解码的图片。"""
+    """Body images and covers share the 5 MB per-image limit observed on the page; images that cannot be decoded are rejected."""
     path = Path(image).expanduser().resolve()
     if not path.is_file():
-        raise FileNotFoundError(f"图片不存在: {path}")
+        raise FileNotFoundError(f"Image not found: {path}")
     size = path.stat().st_size
     if not size:
-        raise ValueError(f"图片文件为空: {path}")
+        raise ValueError(f"Image file is empty: {path}")
     if size > 5 * 1024 ** 2:
-        raise ValueError(f"图片不能超过 5 MB: {path}")
-    # Windows 的 imread 不能可靠打开中文路径；由 pathlib 读字节后解码，不改写用户文件。
+        raise ValueError(f"Image must not exceed 5 MB: {path}")
+    # imread on Windows cannot reliably open paths with Chinese characters; read the bytes with pathlib and decode them, without rewriting the user's file.
     if cv2.imdecode(np.frombuffer(path.read_bytes(), dtype=np.uint8), cv2.IMREAD_UNCHANGED) is None:
-        raise ValueError(f"图片无法解码: {path}")
+        raise ValueError(f"Image cannot be decoded: {path}")
     return path

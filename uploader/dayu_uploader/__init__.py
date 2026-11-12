@@ -1,1 +1,1 @@
-"""大鱼号视频上传与发布结果核验。"""
+"""Dayu video upload and verification of the publish result."""

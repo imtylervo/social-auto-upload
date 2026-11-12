@@ -1,4 +1,4 @@
-"""article 的命令参数与执行逻辑。"""
+"""Command arguments and execution logic for article."""
 from __future__ import annotations
 import json
 from pathlib import Path
@@ -7,24 +7,24 @@ from sau_commands.arguments import SCHEDULE_FORMAT, existing_file_path
 
 
 def register(platform_parsers):
-    """声明本平台命令、参数及合法选项。"""
+    """Declare this platform's commands, arguments and allowed options."""
     schedule_help = SCHEDULE_FORMAT.replace("%", "%%")
-    article_parser = platform_parsers.add_parser("article", help="本地文章转换与主题预览，不登录或发表")
+    article_parser = platform_parsers.add_parser("article", help="Local article conversion and theme preview; no login or publishing")
     article_actions = article_parser.add_subparsers(dest="action", required=True)
-    article_actions.add_parser("themes", help="列出内置主题")
-    article_actions.add_parser("setup", help="安装锁定版本的 Markdown 渲染依赖（需要 Node.js 22+）")
-    article_render = article_actions.add_parser("render", help="将正文文件转换为可预览 HTML")
-    article_render.add_argument("--content-file", required=True, type=existing_file_path, help="UTF-8 Markdown、HTML 或 TXT 文件")
-    article_render.add_argument("--theme", choices=ARTICLE_THEMES, help="Markdown 主题，默认 default；HTML/TXT 不使用主题")
-    article_render.add_argument("--output", required=True, type=Path, help="输出 .html 文件路径")
-    article_render.add_argument("--overwrite", action="store_true", help="覆盖已有输出文件，不允许覆盖原稿")
+    article_actions.add_parser("themes", help="List the built-in themes")
+    article_actions.add_parser("setup", help="Install the pinned Markdown rendering dependencies (requires Node.js 22+)")
+    article_render = article_actions.add_parser("render", help="Convert a content file into HTML for preview")
+    article_render.add_argument("--content-file", required=True, type=existing_file_path, help="UTF-8 Markdown, HTML or TXT file")
+    article_render.add_argument("--theme", choices=ARTICLE_THEMES, help="Markdown theme, default is default; HTML/TXT do not use a theme")
+    article_render.add_argument("--output", required=True, type=Path, help="Output .html file path")
+    article_render.add_argument("--overwrite", action="store_true", help="Overwrite an existing output file; the source draft is never overwritten")
 
 
 async def run(args):
-    """执行本平台命令；发布结果由平台实现核验。"""
+    """Run this platform's command; the platform implementation verifies the publish result."""
     if args.action == "setup":
         setup_article_renderer()
-        print("文章渲染依赖已安装")
+        print("Article rendering dependencies installed")
     elif args.action == "themes":
         for name, description in ARTICLE_THEMES.items():
             print(f"{name}\t{description}")

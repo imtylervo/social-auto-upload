@@ -1,4 +1,4 @@
-"""原稿解析与本地浏览器内容核对；线上发表验收另有真实 CLI 结果记录。"""
+"""Draft parsing and checking content in a local browser; live publishing acceptance is recorded separately from real CLI results."""
 import asyncio
 import json
 import tempfile
@@ -93,22 +93,22 @@ class XueqiuContentTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_moving_image_to_end_is_rejected_with_same_image_count(self):
         await self.page.set_content('<h4>小标题</h4><p><b>前文</b><a href="https://xueqiu.com/">链接</a></p><p>后文</p><img>')
-        with self.assertRaisesRegex(RuntimeError, '段间图片位置'):
+        with self.assertRaisesRegex(RuntimeError, 'image positions between paragraphs'):
             await check_xueqiu_article_content(self.page.locator('body'), self.document)
 
     async def test_lost_heading_structure_is_rejected(self):
         await self.page.set_content('<p>小标题</p><p><b>前文</b><a href="https://xueqiu.com/">链接</a></p><img><p>后文</p>')
-        with self.assertRaisesRegex(RuntimeError, '结构不一致'):
+        with self.assertRaisesRegex(RuntimeError, 'structure does not match'):
             await check_xueqiu_article_content(self.page.locator('body'), self.document)
 
     async def test_changed_link_target_is_rejected(self):
         await self.page.set_content('<h4>小标题</h4><p><b>前文</b><a href="https://example.com/">链接</a></p><img><p>后文</p>')
-        with self.assertRaisesRegex(RuntimeError, '链接文字或目标'):
+        with self.assertRaisesRegex(RuntimeError, 'link text or target'):
             await check_xueqiu_article_content(self.page.locator('body'), self.document)
 
     async def test_wrong_image_is_rejected_even_at_correct_position(self):
         await self.page.set_content('<h4>小标题</h4><p><b>前文</b><a href="https://xueqiu.com/">链接</a></p><img src="//xqimg.imedao.com/wrong.png"><p>后文</p>')
-        with self.assertRaisesRegex(RuntimeError, '图片内容或顺序'):
+        with self.assertRaisesRegex(RuntimeError, 'images differ in content or order'):
             await check_xueqiu_article_content(self.page.locator('body'), self.document,
                                               ['https://xqimg.imedao.com/expected.png'])
 
@@ -125,7 +125,7 @@ class XueqiuContentTests(unittest.IsolatedAsyncioTestCase):
         result.write_text(json.dumps({'identity': {'uid': '123'}, 'content_id': '789',
                                      'content_file': str(root / 'article.html'),
                                      'manifest': {'structure_sha256': 'original'}}), encoding='utf-8')
-        with self.assertRaisesRegex(ValueError, '原稿与发表时'):
+        with self.assertRaisesRegex(ValueError, 'differs from the content at publish time'):
             await verify_xueqiu_result(account, result)
 
     async def test_old_result_with_content_error_is_not_reported_as_success(self):
@@ -135,7 +135,7 @@ class XueqiuContentTests(unittest.IsolatedAsyncioTestCase):
         result = root / 'result.json'
         result.write_text(json.dumps({'identity': {'uid': '123'}, 'content_id': '789',
                                      'error': '正文核对失败'}), encoding='utf-8')
-        with self.assertRaisesRegex(ValueError, '保留核对错误'):
+        with self.assertRaisesRegex(ValueError, 'keeps a check error'):
             await verify_xueqiu_result(account, result)
 
     async def test_verify_rejects_wrong_account_before_opening_browser(self):
@@ -144,12 +144,12 @@ class XueqiuContentTests(unittest.IsolatedAsyncioTestCase):
         account.with_suffix('.identity.json').write_text(json.dumps({'uid': '123', 'name': '测试'}), encoding='utf-8')
         result = root / 'result.json'
         result.write_text(json.dumps({'identity': {'uid': '456'}, 'content_id': '789'}), encoding='utf-8')
-        with self.assertRaisesRegex(ValueError, '账号不一致'):
+        with self.assertRaisesRegex(ValueError, 'does not match the selected Xueqiu account'):
             await verify_xueqiu_result(account, result)
 
 
 class XueqiuQueryTests(unittest.IsolatedAsyncioTestCase):
-    """模拟分页响应，保证原作品查询不会退化为重发或无限翻页。"""
+    """Simulate paged responses so that looking up the original post never degrades into re-posting or endless paging."""
 
     async def test_original_id_can_be_found_on_later_page(self):
         first = Mock(ok=True, status=200)
@@ -192,7 +192,7 @@ class XueqiuQueryTests(unittest.IsolatedAsyncioTestCase):
         future.set_result(response)
         page.expect_response.return_value.__aenter__.return_value.value = future
         with patch('uploader.xueqiu_uploader.verification.read_xueqiu_identity', AsyncMock(return_value={'uid': '123'})):
-            with self.assertRaisesRegex(RuntimeError, '重复返回同一页'):
+            with self.assertRaisesRegex(RuntimeError, 'returned the same page again'):
                 await query_xueqiu_article(page, {'uid': '123'}, '789')
         page.context.request.get.assert_awaited_once()
         page.context.request.post.assert_not_called()

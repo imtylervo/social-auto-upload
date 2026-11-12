@@ -1,1 +1,1 @@
-"""知乎创作中心发布。"""
+"""Publishing through the Zhihu creator center."""

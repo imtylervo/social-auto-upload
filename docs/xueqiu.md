@@ -1,103 +1,107 @@
-# 雪球长文
+# Xueqiu Long Articles
 
-支持 UTF-8 HTML、Markdown、TXT 正文。图片写在原稿对应位置，程序上传本地图片并在该处插入；支持独立封面、公开/私人分享和创作声明。已使用正式 CLI 验证 HTML 结构、段间配图、封面、真实发表及后台原作品查询。
+Supports UTF-8 HTML, Markdown and TXT body files. Images are written at their positions in the source file. The program uploads local images and inserts them at those positions. It also supports a separate cover, public/private sharing and a creation declaration. The official CLI has been used to verify the HTML structure, images between paragraphs, the cover, real publishing, and querying the original work in the management backend.
 
-## 首次安装
+## First-time setup
 
-先按[项目安装说明](./install.md)安装 Python 3.10–3.12、依赖和 `sau` 命令，并从 `conf.example.py` 复制生成本地 `conf.py`。雪球使用已安装的 Google Chrome；安装 Chromium 不等于安装 Chrome。Chrome 不在默认位置时，在 `conf.py` 中配置 `LOCAL_CHROME_PATH` 为本机实际可执行文件路径，默认留空则使用系统 Chrome 通道。
+First follow the [project installation guide](./install.md) to install Python 3.10–3.12, the dependencies and the `sau` command, and copy `conf.example.py` to create a local `conf.py`. Xueqiu uses the installed Google Chrome. Installing Chromium is not the same as installing Chrome. If Chrome is not in its default location, set `LOCAL_CHROME_PATH` in `conf.py` to the real executable path on your machine. Left empty (the default), the system Chrome channel is used.
 
-推荐使用 Markdown 原稿。需要 Node.js 22+，首次执行 `sau article setup` 安装渲染依赖。仓库提供带两张段间配图的 [Markdown 示例](../examples/xueqiu_article.md)，配图文件随仓库提供，直接从项目根目录运行：
+Markdown source files are recommended. Node.js 22+ is required. Run `sau article setup` the first time to install the rendering dependencies. The repository provides a [Markdown example](../examples/xueqiu_article.md) with two images between paragraphs. The image files ship with the repository. Run it from the project root:
 
 ```powershell
 sau article setup
+# --title "雪球文章示例" = "Xueqiu article example"
+# --visibility 私人 = private
+# --declaration "本文包含AI生成内容" = "This article contains AI-generated content"
 sau xueqiu upload-article --account creator --title "雪球文章示例" --content-file examples/xueqiu_article.md --visibility 私人 --declaration "本文包含AI生成内容" --prepare-only
 ```
 
-运行前先按下一节登录。准备预览仍会自动保存远端草稿；确认内容后，实际发表时去掉 `--prepare-only`。
+Log in first, as described in the next section. Prepare mode still saves a remote draft automatically. After you have checked the content, remove `--prepare-only` to actually publish.
 
-也支持 [HTML 示例](../examples/xueqiu_article.html)和 TXT，这两种格式不需要 Node.js。
+An [HTML example](../examples/xueqiu_article.html) and TXT are also supported. Neither format needs Node.js.
 
-## 登录一次
+## Log in once
 
 ```powershell
-sau xueqiu login --account creator --expected-name "你的雪球昵称"
+sau xueqiu login --account creator --expected-name "Your Xueqiu nickname"
 sau xueqiu check --account creator
 ```
 
-登录时在打开的 Chrome 中完成验证。程序保存本地会话并绑定用户 ID，同一别名不会覆盖其他账号。账号密码无需写入命令或源码。后续上传与查询复用该会话。
+Complete the verification in the Chrome window that opens. The program saves a local session and binds it to the user ID, so the same alias does not overwrite another account. The account and password do not need to go into commands or source code. Later uploads and queries reuse this session.
 
-默认使用可见 Chrome；本机无头访问曾被平台拦截，可显式传 `--headless`，但不能把访问拦截当作登录失效。
+A visible Chrome is used by default. Local headless access has been blocked by the platform before. You can pass `--headless` explicitly, but do not treat an access block as an expired login.
 
-## 原稿与配图
+## Source files and images
 
-Markdown 示例，图片路径相对于**原稿文件所在目录**：
+Markdown example. Image paths are relative to the **directory of the source file**:
 
 ```markdown
-# 第一部分
+# Part one
 
-图片前面的段落，含**加粗**文字。
+A paragraph before the image, with **bold** text.
 
-![第一张配图](images/第一张.png)
+![First image](images/first.png)
 
-## 第二部分
+## Part two
 
-这段位于两张图片之间。
+This paragraph sits between the two images.
 
-![第二张配图](images/第二张.jpg)
+![Second image](images/second.jpg)
 
-第二张图之后的结尾。
+The ending after the second image.
 ```
 
-HTML 也使用同样的原稿顺序：
+HTML uses the same source order:
 
 ```html
-<h1>第一部分</h1>
-<p>图片前面的段落，含<strong>加粗</strong>文字。</p>
-<img src="images/第一张.png">
-<h2>第二部分</h2>
-<p>这段位于两张图片之间。</p>
-<img src="images/第二张.jpg">
-<p>第二张图之后的结尾。</p>
+<h1>Part one</h1>
+<p>A paragraph before the image, with <strong>bold</strong> text.</p>
+<img src="images/first.png">
+<h2>Part two</h2>
+<p>This paragraph sits between the two images.</p>
+<img src="images/second.jpg">
+<p>The ending after the second image.</p>
 ```
 
-Markdown 使用 `# 标题`、`## 小标题`、`**加粗**` 和 `![说明](images/配图.png)`。首次使用 Markdown 需要 Node.js 22+，在仓库中执行 `sau article setup` 安装现有渲染依赖。图片接受本地 GIF/JPEG/PNG，必须存在且非空；不接受网络图片地址或 data URL。
+Markdown uses `# Title`, `## Subtitle`, `**bold**` and `![caption](images/figure.png)`. Using Markdown for the first time needs Node.js 22+. Run `sau article setup` in the repository to install the existing rendering dependencies. Images must be local GIF/JPEG/PNG files that exist and are not empty. Web image URLs and data URLs are not accepted.
 
-雪球采用自己的原生样式：各级标题统一为平台小标题；保留段落、加粗、斜体和链接；列表转为保留编号/圆点的段落；引用保留文字和段落。自定义颜色、字体、间距等 CSS 不保证保留，结果文件会列出发生的转换。表格、代码块、分隔线等尚未验证的结构会在创建远端草稿前明确报错。
+Xueqiu uses its own native style. Headings of all levels become the platform's subheading. Paragraphs, bold, italic and links are kept. Lists become paragraphs that keep their numbers or bullets. Quotes keep their text and paragraphs. Custom CSS such as colors, fonts and spacing is not guaranteed to be kept. The result file lists the conversions that happened. Structures not yet verified, such as tables, code blocks and horizontal rules, fail with a clear error before a remote draft is created.
 
-## 发表
+## Publishing
 
 ```powershell
-sau xueqiu upload-article --account creator --title "文章标题" --content-file "文章.md" --declaration "本文包含AI生成内容"
+# --declaration "本文包含AI生成内容" = "This article contains AI-generated content"
+sau xueqiu upload-article --account creator --title "Article title" --content-file "article.md" --declaration "本文包含AI生成内容"
 ```
 
-不传 `--prepare-only` 就会实际发表。`--visibility` 可选 `公开`、`私人`，默认公开；测试或仅自己查看时明确传 `--visibility 私人`。`--declaration` 必须按实际情况选择 `不添加创作声明` 或 `本文包含AI生成内容`。
+Without `--prepare-only`, the article is actually published. `--visibility` accepts `公开` (public) or `私人` (private). The default is public. For testing, or when only you should see it, pass `--visibility 私人` explicitly. `--declaration` must be chosen to match the real situation: `不添加创作声明` (do not add a creation declaration) or `本文包含AI生成内容` (this article contains AI-generated content).
 
-独立封面可选 `--cover "封面.png"`，采用平台默认裁剪区域。正文图片只从原稿读取，没有文末追加图片参数。标题须为非空单行，正文须有文字；大小及长度限制以平台校验为准。
+A separate cover is optional: `--cover "cover.png"`. It uses the platform's default crop area. Body images are read only from the source file. There is no option to append images at the end of the article. The title must be a non-empty single line, and the body must contain text. Size and length limits follow the platform's validation.
 
-只想检查时增加 `--prepare-only`。雪球在编辑时会自动保存远端草稿，此模式会核对预览并保存截图；重复运行可能新增草稿。若页面恢复了已有文章，程序会拒绝覆盖。`--debug` 保存失败截图。
+To only check, add `--prepare-only`. Xueqiu saves a remote draft automatically while editing. This mode checks the preview and saves a screenshot. Running it repeatedly may create new drafts. If the page restores an existing article, the program refuses to overwrite it. `--debug` saves a screenshot on failure.
 
-## 结果与异常查询
+## Results and error lookup
 
-发表成功返回 `status: published` 和作品 ID；程序核对最终受理的主体、标题、分享范围与正文，并在已发布管理列表按 ID 查询。`management_verified: true` 表示后台原作品查询也通过。私人文章显示“仅自己可见”，不代表未发表。
+A successful publish returns `status: published` and the work ID. The program checks the subject, title, sharing scope and body that the platform finally accepted, and looks the work up by ID in the published-management list. `management_verified: true` means the backend lookup of the original work also passed. A private article shows 仅自己可见 (visible only to me), which does not mean it was not published.
 
-`prepared` 只表示草稿/预览检查完成。命令输出结果 JSON 路径，结果及截图保存在账号目录的 `xueqiu_results` 下。
+`prepared` only means the draft/preview check is done. The command prints the path of the result JSON. The result and screenshots are saved under `xueqiu_results` in the account directory.
 
-提交遇到超时或 `submission_unknown` 时，只查询原作品，不重复上传：
+If submission times out or returns `submission_unknown`, only query the original work. Do not upload again:
 
 ```powershell
-sau xueqiu verify --account creator --result "本次结果文件.json"
+sau xueqiu verify --account creator --result "this_result_file.json"
 ```
 
-此命令按结果文件中的原作品 ID、标题、账号及分享范围核对后台，并使用发表时记录的原稿路径重查后台正文和图片。查询前请保留原稿和图片且不要修改内容；原稿改变时明确报错。旧版未记录原稿路径的成功结果仅核查作品身份和分享范围，不代表重新验证正文。没有 ID 时应先在后台按标题和时间核查，不直接重跑发表。平台已受理但后续检查报错时，保留该 ID 查询，避免重复作品。
+This command checks the backend against the original work ID, title, account and sharing scope in the result file. It also uses the source path recorded at publish time to re-check the body and images in the backend. Before querying, keep the source file and images and do not change their content. If the source file has changed, the command reports a clear error. For older successful results that did not record the source path, only the work identity and sharing scope are checked. This does not re-verify the body. If there is no ID, first check the backend by title and time. Do not simply rerun the publish. If the platform accepted the article but a later check reports an error, keep that ID and query it, to avoid duplicate works.
 
-本次账号的完整长文表单没有观察到定时设置；视频、Word 导入、自定义封面裁剪、@好友、话题和股票关联尚未接入。
+No scheduling setting was seen in the full long-article form of this account. Video, Word import, custom cover cropping, @-mentioning friends, topics and stock links are not supported yet.
 
-## 开发验证
+## Development verification
 
-完成项目安装、Chrome 安装和 `sau article setup` 后，可执行：
+After the project, Chrome and `sau article setup` are installed, you can run:
 
 ```powershell
 python -m unittest tests.test_xueqiu_uploader tests.test_article_render tests.test_sau_browser_cli -v
 ```
 
-这些测试使用临时文件、本地浏览器页面和模拟查询响应，不需要雪球账号，也不会发表文章。分页查询包含模拟测试；不同系统和账号仍需在各自环境验证，当前真实发表验收环境为 Windows Chrome。
+These tests use temporary files, local browser pages and mocked query responses. They need no Xueqiu account and do not publish any article. Paginated queries have mock tests. Different systems and accounts still need to be verified in their own environments. The environment of the current real-publishing acceptance is Windows Chrome.

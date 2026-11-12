@@ -1,16 +1,16 @@
 ---
 name: weibo-upload
-description: 使用 social-auto-upload 的 `sau weibo` 登录微博并发布视频，可指定封面。Use when 用户要向微博发布视频或检查微博账号状态。
+description: Use social-auto-upload's `sau weibo` to log in to Weibo and publish videos, with an optional cover. Use when the user wants to publish a video to Weibo or check the Weibo account state.
 license: MIT-0
 slug: social-auto-upload-weibo-upload
-displayName: 微博视频发布
+displayName: Weibo video publishing
 version: 1.0.0
-summary: 使用 sau 登录微博并发布视频，可指定封面。
+summary: Log in to Weibo with sau and publish videos, with an optional cover.
 ---
 
-# 微博视频发布
+# Weibo video publishing
 
-调用现有 CLI，不另写网页上传流程。账号名是本地会话别名。
+Call the existing CLI; do not write a separate web upload flow. The account name is a local session alias.
 
 ```powershell
 sau weibo login --account creator
@@ -18,6 +18,6 @@ sau weibo check --account creator
 sau weibo upload-video --account creator --file videos/demo.mp4 --title "标题" --desc "简介" --tags 微博,测试 --thumbnail covers/demo.png
 ```
 
-当前仅支持视频，不支持图文和定时发布。标题最多 30 个字；封面建议小于 5 MB。登录时若出现二维码，展示二维码图片供用户扫码。完整参数以 `sau weibo upload-video --help` 为准。
+Only videos are supported for now; image posts and scheduled publishing are not. The title is at most 30 characters; the cover should preferably be under 5 MB. If a QR code appears during login, show the QR code image so the user can scan it. For the full arguments, `sau weibo upload-video --help` is authoritative.
 
-发布前核对账号、视频、标题长度、简介、标签和封面。提交后只根据实际平台反馈报告结果；超时或状态不明时先在微博后台确认原作品，不重复上传。
+Before publishing, check the account, video, title length, description, tags and cover. After submitting, report the result only from the actual platform feedback. On a timeout or unclear state, confirm the original post in the Weibo backend first and do not upload again.

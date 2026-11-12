@@ -1,154 +1,157 @@
-# 大鱼号图文发布
+# Dayu Image Post Publishing
 
-使用 UTF-8 正文文件发布文章：有格式的正文用 `.html`、`.htm` 或 Markdown（`.md`、`.markdown`），纯文字用 `.txt`。文章内容保存在文件中，CLI 只接收文件路径，适合长文章、多段落和图文混排。正文上限为 2 万字，超限会在上传前报错。
+Publish an article from a UTF-8 body file. Use `.html`, `.htm` or Markdown (`.md`, `.markdown`) for a formatted body, and `.txt` for plain text. The article content stays in the file and the CLI only takes the file path, which suits long articles, many paragraphs and mixed text and images. The body is limited to 20,000 characters. A longer body fails with an error before upload.
 
-## 登录
+## Login
 
-与视频发布共用账号，无需重复登录：
+The account is shared with video publishing, so there is no need to log in again:
 
 ```powershell
-sau dayu login --account creator --expected-name "你的大鱼号名称"
+sau dayu login --account creator --expected-name "Your Dayu account name"
 sau dayu check --account creator
 ```
 
-安装方法见 [CLI 使用说明](./CLI.md)。Windows 中找不到 `sau` 时可使用 `.\.venv\Scripts\sau.exe`。
+For installation, see the [CLI guide](./CLI.md). On Windows, if `sau` is not found, you can use `.\.venv\Scripts\sau.exe`.
 
-## 发布一篇文章
+## Publish an article
 
 ```powershell
-sau dayu upload-article --account creator --title "如何阅读作品数据面板" --content-file "examples/dayu_article.html" --source "无需标注" --author "你的作者名称" --cover-indices 1
+# --title "如何阅读作品数据面板" = "How to read the work data dashboard"; --source "无需标注" = "No label needed"
+sau dayu upload-article --account creator --title "如何阅读作品数据面板" --content-file "examples/dayu_article.html" --source "无需标注" --author "Your author name" --cover-indices 1
 ```
 
-此命令会实际发表；平台确认发表后即返回成功，不等待审核。可先用 `--prepare-only` 上传图片并检查填表结果；该模式保存本地截图后结束，未发表，也不生成服务端预览，不能据此判断最终主题效果。
+This command actually publishes. It returns success once the platform confirms the publish, without waiting for review. You can first use `--prepare-only` to upload the images and check the filled-in form. That mode saves a local screenshot and stops. It does not publish and does not produce a server-side preview, so you cannot judge the final theme effect from it.
 
-| 必填内容 | 参数 | 要求 |
+| Required item | Option | Requirement |
 | --- | --- | --- |
-| 账号 | `--account` | 已登录的本地账号名称 |
-| 文章标题 | `--title` | 5–50 字，英文字符按半字计数并向上取整 |
-| 正文文件 | `--content-file` | UTF-8 的 HTML、Markdown 或 TXT 文件；正文文字最多 2 万字 |
-| 信息来源 | `--source` | 无需标注、AI生成、虚构演绎、营销信息、转载、个人观点、不适宜未成年人 |
-| 原文链接 | `--source-url` | 选择“转载”时必填，提供 http/https 原文链接 |
+| Account | `--account` | Name of a logged-in local account |
+| Article title | `--title` | 5–50 characters; English characters count as half a character, rounded up |
+| Body file | `--content-file` | A UTF-8 HTML, Markdown or TXT file; at most 20,000 characters of body text |
+| Information source | `--source` | 无需标注 (No label needed), AI生成 (AI-generated), 虚构演绎 (Fictional dramatization), 营销信息 (Marketing information), 转载 (Repost), 个人观点 (Personal opinion), 不适宜未成年人 (Not suitable for minors) |
+| Original link | `--source-url` | Required when 转载 (Repost) is chosen. Provide an http/https link to the original |
 
-当前图文页没有视频发布中的“分类”或“标签”字段，无需提供对应参数。
+The current image post page has no "category" or "tags" fields like the ones in video publishing, so those options are not needed.
 
-## 定时发表
+## Scheduled publishing
 
-在上述命令中增加 `--schedule "YYYY-MM-DD HH:MM"`，按**北京时间（Asia/Shanghai，UTC+8）**解释。时间须在当前时间 2 小时后至 7 天内，分钟为 5 的倍数；例如 `10:30`、`10:35`。请预留图片上传和正文处理的时间，填表时也会重新检查范围；无效时间不会自动取整或改成立即发表。
+Add `--schedule "YYYY-MM-DD HH:MM"` to the command above. It is interpreted as **Beijing time (Asia/Shanghai, UTC+8)**. The time must be between 2 hours and 7 days after the current time, and the minutes must be a multiple of 5, for example `10:30` or `10:35`. Leave time for image upload and body processing. The range is checked again when the form is filled in. An invalid time is not rounded automatically or changed to immediate publishing.
 
 ```powershell
+# --title "如何阅读作品数据面板" = "How to read the work data dashboard"; --source "无需标注" = "No label needed"
 sau dayu upload-article --account creator --title "如何阅读作品数据面板" --content-file examples/article.md --theme modern --source "无需标注" --cover-indices 1 --schedule "2027-01-01 10:30"
 ```
 
-请将示例日期换成实际范围内的时间。省略该参数默认立即发表。平台确认原作品及预定时间后，命令即返回定时安排成功，不等待到点或审核；审核延长时平台可能晚于预定时间公开。
+Replace the example date with a time in the real allowed range. Without this option, the article is published immediately. After the platform confirms the original work and the scheduled time, the command returns that the schedule succeeded. It does not wait for the time to arrive or for review. If review takes longer, the platform may publish it later than the scheduled time.
 
-## 如何提供带格式的正文
+## How to provide a formatted body
 
-用 HTML 标签表达文章结构，例如：
+Express the article structure with HTML tags, for example:
 
 ```html
-<h1>小节标题</h1>
-<p>正文段落，可以包含<strong>加粗重点</strong>。</p>
+<h1>Section title</h1>
+<p>A body paragraph, which can contain <strong>bold key points</strong>.</p>
 <img src="images/example.png">
-<blockquote>引用内容。</blockquote>
+<blockquote>Quoted content.</blockquote>
 <ol>
-  <li>第一步。</li>
-  <li>第二步。</li>
+  <li>Step one.</li>
+  <li>Step two.</li>
 </ol>
 <ul>
-  <li>列表项目。</li>
+  <li>A list item.</li>
 </ul>
 <hr>
-<p>最后一段。</p>
+<p>The last paragraph.</p>
 ```
 
-| 文章格式 | 写法 |
+| Article format | How to write it |
 | --- | --- |
-| 段落、换行 | `<p>`、`<br>` |
-| 小节标题 | `<h1>` 至 `<h6>` |
-| 加粗 | `<strong>` 或 `<b>` |
-| 引用 | `<blockquote>` |
-| 有序、无序列表 | `<ol>`、`<ul>`，其中用 `<li>` 写每一项 |
-| 分隔线 | `<hr>` |
-| 图片 | `<img src="本地图片路径">` |
+| Paragraphs, line breaks | `<p>`, `<br>` |
+| Section headings | `<h1>` to `<h6>` |
+| Bold | `<strong>` or `<b>` |
+| Quote | `<blockquote>` |
+| Ordered and unordered lists | `<ol>`, `<ul>`, with `<li>` for each item |
+| Horizontal rule | `<hr>` |
+| Image | `<img src="local image path">` |
 
-可以直接提供上述 HTML 片段，也可以使用带 `html/head/body` 的完整 HTML 文件。标签需要正确闭合；图片和换行等空标签除外。
+You can provide the HTML fragment above directly, or a complete HTML file with `html/head/body`. Tags must be closed correctly, except empty tags such as images and line breaks.
 
-当前命令支持上表中的格式，以及带内联 CSS 的主题 HTML、`section/div/span/figure` 布局容器。带样式的正文会自动转换为**大鱼号兼容排版**：保留文字颜色、背景色和近似字号，正文仍是可选择、可复制的文字。圆角不能保留，字体、间距和边框可能与本地预览不同；不保证所有 CSS 原样显示。确认发表前会核对服务端预览的完整正文、图文顺序、文字颜色和背景色，检查失败时中止发表。
+The current command supports the formats in the table above, plus themed HTML with inline CSS and the `section/div/span/figure` layout containers. A styled body is automatically converted to **Dayu-compatible layout**. Text color, background color and approximate font size are kept, and the body is still selectable and copyable text. Rounded corners cannot be kept. Fonts, spacing and borders may differ from the local preview. Not every CSS rule is guaranteed to display as written. Before the publish is confirmed, the full body, the order of text and images, the text colors and the background colors in the server-side preview are checked. If the check fails, publishing is aborted.
 
-请保留原始 Markdown/HTML 文件。大鱼号网页编辑器再次导入兼容排版时可能清理颜色、布局或图片；网页重新编辑后的效果不在本命令的保留范围内。`--prepare-only` 的编辑器截图也不代表最终主题效果。
+Keep the original Markdown/HTML file. When the Dayu web editor imports the compatible layout again, it may clean up colors, layout or images. The effect after re-editing on the web is outside what this command preserves. The editor screenshot from `--prepare-only` also does not represent the final theme effect.
 
-斜体、代码块、用户输入的表格、外部样式表、脚本及其他未接入标签会在上传前提示修改。Word 文件尚未接入。
+Italics, code blocks, user-entered tables, external stylesheets, scripts and other tags that are not connected yet are reported before upload so you can change them. Word files are not connected yet.
 
-Markdown 会先在本地渲染为 HTML，再导入大鱼号。默认主题为 `default`，可选 `default/grace/simple/modern/plain`；`plain` 仅转换结构。首次使用 Markdown 前执行 `sau article setup`，需要 Node.js 22+。预览与转换方法见 [文章文件与主题渲染](./article.md)。
+Markdown is first rendered to HTML locally and then imported into Dayu. The default theme is `default`. The options are `default/grace/simple/modern/plain`, and `plain` converts only the structure. Before using Markdown for the first time, run `sau article setup`, which needs Node.js 22+. For preview and conversion, see [Article Files and Theme Rendering](./article.md).
 
 ```powershell
+# --title "如何阅读作品数据面板" = "How to read the work data dashboard"; --source "无需标注" = "No label needed"
 sau dayu upload-article --account creator --title "如何阅读作品数据面板" --content-file examples/article.md --theme modern --source "无需标注" --cover-indices 1
 
-# 先生成主题 HTML，再发表同一份 HTML；HTML 输入不再传 --theme
+# Generate the themed HTML first, then publish that same HTML; do not pass --theme for HTML input
 sau article render --content-file examples/article.md --theme modern --output output/article.html
 sau dayu upload-article --account creator --title "如何阅读作品数据面板" --content-file output/article.html --source "无需标注" --cover-indices 1
 ```
 
-完整示例见 [dayu_article.html](../examples/dayu_article.html)。纯文字文件会按每一行生成段落，不把其中的 HTML 字符当作格式。
+For a complete example, see [dayu_article.html](../examples/dayu_article.html). A plain-text file generates one paragraph per line, and HTML characters in it are not treated as formatting.
 
-## 图片和封面
+## Images and covers
 
-正文中的图片使用本地路径。相对路径以 **正文文件所在目录** 为起点；绝对路径也可以使用。程序按文章中的图片位置上传，保留图文顺序。
+Images in the body use local paths. A relative path starts from the **directory of the body file**. Absolute paths also work. The program uploads images at their positions in the article and keeps the order of text and images.
 
-每张图片最大 5 MB，须能在本地正常解码。网络图片地址、`data:` 图片和 `file:` URL 尚未支持，请先准备本地图片。可以传入带图片内联样式的 HTML，但图片通过平台上传器插入，使用平台默认图片排版，原图 CSS 或尺寸不会保留。
+Each image can be at most 5 MB and must decode normally on the local machine. Web image URLs, `data:` images and `file:` URLs are not supported yet, so prepare local images first. You can pass HTML with inline image styles, but images are inserted through the platform uploader and use the platform's default image layout. The CSS or size of the original image is not kept.
 
-横版封面可以从正文图片中选择，序号按正文出现顺序从 1 开始：
+A landscape cover can be chosen from the body images. The index counts from 1 in the order the images appear in the body:
 
 ```powershell
-# 单封面：使用正文第 1 张图片
+# Single cover: use the 1st body image
 --cover-indices 1
 
-# 三封面：按指定顺序使用正文第 1、3、2 张图片
+# Three covers: use the 1st, 3rd and 2nd body images, in that order
 --cover-indices 1 3 2
 ```
 
-三封面需要 3 个不同的正文图片序号。程序会按页面的默认裁剪框生成封面。省略 `--cover-indices` 时沿用页面的封面设置。
+Three covers need 3 different body image indices. The program generates the covers with the page's default crop box. When `--cover-indices` is omitted, the page's cover setting is kept.
 
-## 页面其他功能
+## Other features on the page
 
-下表按当前图文发布页整理，部分功能可能受账号权限影响。
+The table below follows the current image post publishing page. Some features may depend on account permissions.
 
-| 页面功能 | 当前命令支持情况 |
+| Page feature | Support in the current command |
 | --- | --- |
-| 作者名称 | 选填，使用 `--author`；最多 10 字，英文按半字计数并向上取整；省略时沿用网页值 |
-| 设为默认作者 | 尚未支持修改 |
-| 单封面、三封面 | 支持从正文图片选择，使用 `--cover-indices` |
-| 竖版封面 | 尚未支持 |
-| 个人素材库选图 | 尚未支持，当前使用正文文件引用的本地图片 |
-| 定时发布 | 支持 `--schedule`；北京时间 2 小时后至 7 天内，5 分钟一档 |
-| 导入文档 | 网页支持 doc/docx/pdf/txt，最大 5 MB；尚未接入，当前命令使用 HTML/Markdown/TXT 文件 |
-| 正文插入视频 | 尚未支持 |
-| 创作助手：标题、错别字、违规广告检测 | 沿用网站设置，尚未提供配置参数 |
-| 网页预览 | 发表过程中会进入预览并确认；没有独立预览命令 |
-| 保存草稿、清空 | 尚未提供对应命令 |
+| Author name | Optional, with `--author`. At most 10 characters; English counts as half a character, rounded up. If omitted, the value on the web page is kept |
+| Set as default author | Changing it is not supported yet |
+| Single cover, three covers | Choosing from the body images is supported, with `--cover-indices` |
+| Portrait cover | Not supported yet |
+| Choose images from the personal asset library | Not supported yet. The command currently uses the local images referenced by the body file |
+| Scheduled publishing | `--schedule` is supported; 2 hours to 7 days ahead in Beijing time, in 5-minute steps |
+| Import document | The web page supports doc/docx/pdf/txt, at most 5 MB. Not connected yet. The command currently uses HTML/Markdown/TXT files |
+| Insert video into the body | Not supported yet |
+| Writing assistant: title, typo and rule-violating ad checks | Follows the site's settings. There is no option to configure it yet |
+| Web preview | The publishing process goes into the preview and confirms it. There is no separate preview command |
+| Save draft, clear | No corresponding command yet |
 
-## 查看发布结果
+## Viewing the publish result
 
-发表成功时返回作品 ID，表示平台已确认本次发表；不等待审核或公开访问。提交前会核对编辑器的正文、图片顺序及支持的格式；有主题样式时还会检查服务端预览中的兼容排版。
+A successful publish returns the work ID, which means the platform has confirmed this publish. It does not wait for review or public access. Before submitting, the editor's body, image order and supported formats are checked. When there are theme styles, the compatible layout in the server-side preview is also checked.
 
-如果网络中断等原因导致发表结果未确认，使用日志给出的结果文件只读查询原作品，避免重复发表：
-
-```powershell
-sau dayu verify --account creator --result "cookies/dayu_results/本次结果文件.json"
-```
-
-查询找到已提交的原作品即成功，仍在审核中也会返回成功。定时作品会同时核对结果文件里的预定时间，确认安排即成功。也可以按作品 ID 查询：
+If the publish result is not confirmed, for example because the network dropped, use the result file named in the log to query the original work read-only, to avoid publishing twice:
 
 ```powershell
-sau dayu verify --account creator --type article --content-id "作品ID"
+sau dayu verify --account creator --result "cookies/dayu_results/this_result_file.json"
 ```
 
-需要额外核对公开文章时，主动添加 `--public`：
+The query succeeds when it finds the submitted original work, and also succeeds if the work is still under review. For a scheduled work, it also checks the scheduled time in the result file, and succeeds once the schedule is confirmed. You can also query by work ID:
 
 ```powershell
-sau dayu verify --account creator --result "cookies/dayu_results/本次结果文件.json" --public --timeout 900
+sau dayu verify --account creator --type article --content-id "work ID"
 ```
 
-公开检查会等待文章可公开访问，核对标题、账号和图片加载；使用本次结果文件还会比对完整正文、图文顺序和支持的格式，主题文章还会核对文字颜色和背景色，成功时返回公开文章链接。公开检查是独立操作，不影响发表操作已确认的成功结果。
+To additionally check the public article, add `--public`:
 
-默认等待每张图片上传最多 600 秒，可用 `--upload-timeout` 调整，单位为秒。`--headed` 显示 Chrome，`--debug` 出错时保存截图。
+```powershell
+sau dayu verify --account creator --result "cookies/dayu_results/this_result_file.json" --public --timeout 900
+```
+
+The public check waits until the article can be accessed publicly, and checks the title, the account and that images load. With this publish's result file, it also compares the full body, the order of text and images, and the supported formats. For a themed article it also checks text color and background color. On success it returns the public article link. The public check is a separate operation and does not affect the success result already confirmed by the publish.
+
+By default it waits up to 600 seconds for each image to upload. You can adjust this with `--upload-timeout`, in seconds. `--headed` shows Chrome, and `--debug` saves a screenshot on error.

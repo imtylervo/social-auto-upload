@@ -1,4 +1,4 @@
-"""以真实浏览器 DOM 和受控作品响应验证大鱼号的关键成功/失败边界。"""
+"""Check Dayu's key success/failure boundaries with a real browser DOM and controlled post responses."""
 import copy
 import unittest
 from pathlib import Path
@@ -57,7 +57,7 @@ class DayuBrowserTests(unittest.IsolatedAsyncioTestCase):
             await wait_dayu_processing(self.page, "demo.mp4", timeout=.05)
 
     async def make_public_context(self):
-        """公开页在本地路由中播放真实 demo，不借用任何登录状态或外网媒体。"""
+        """The public page plays the real demo through a local route; it borrows no login state and no external media."""
         context = await self.browser.new_context()
         html = '''<meta charset="utf-8"><div class="pc-videoContent-test">大鱼号上传测试</div>
             <div class="pc-userInfoContainer-test"><span>测试账号</span></div>
@@ -102,12 +102,12 @@ class DayuBrowserTests(unittest.IsolatedAsyncioTestCase):
         request = SimpleNamespace(get=AsyncMock(return_value=SimpleNamespace(
             ok=True, json=AsyncMock(return_value={"dataList": {"data": [pending], "totalPage": 1}}),
         )))
-        with self.assertRaisesRegex(TimeoutError, "勿重新上传"):
+        with self.assertRaisesRegex(TimeoutError, "do not upload again"):
             await verify_dayu_video(SimpleNamespace(request=request), self.browser,
                                     self.identity, content_id=self.record["content_id"], timeout=.05, public=True)
 
     async def test_default_verification_succeeds_during_review_without_public_browser(self):
-        # 审核中已经提交成功；公开 URL 即使缺失，也不应触发公开浏览器或等待审核。
+        # Under review already means the submission succeeded; even with the public URL missing, it must not open the public browser or wait for review.
         pending = dict(self.record, status=3, audit_status=0, ucUrl="")
         for verify in (verify_dayu_video, verify_dayu_article):
             with self.subTest(verify=verify.__name__):
@@ -135,7 +135,7 @@ class DayuBrowserTests(unittest.IsolatedAsyncioTestCase):
         request = SimpleNamespace(get=AsyncMock(return_value=SimpleNamespace(
             ok=True, json=AsyncMock(return_value={"dataList": {"data": [wrong_owner], "totalPage": 1}}),
         )))
-        with self.assertRaisesRegex(RuntimeError, "主体或 origin_id 不匹配"):
+        with self.assertRaisesRegex(RuntimeError, "identity or origin_id of the post's public URL does not match"):
             await verify_dayu_video(SimpleNamespace(request=request), self.browser,
                                     self.identity, content_id=self.record["content_id"], timeout=1, public=True)
 
@@ -151,10 +151,10 @@ class DayuMediaTests(unittest.TestCase):
                 json.dumps({"wmid": "a" * 32, "name": "测试账号"}), encoding="utf-8",
             )
             for category, source, source_url, message in (
-                ("不存在的分类", "无需标注", "", "视频分类必须为"),
-                ("科技", "转载", "", "原文链接"),
-                ("科技", "转载", "ftp://example.com/video", "原文链接"),
-                ("科技", "无需标注", "https://example.com/video", "仅信息来源为转载"),
+                ("不存在的分类", "无需标注", "", "Video category must be one of"),
+                ("科技", "转载", "", "link of the original"),
+                ("科技", "转载", "ftp://example.com/video", "link of the original"),
+                ("科技", "无需标注", "https://example.com/video", "may only be given when the information source is"),
             ):
                 with self.subTest(category=category, source=source, source_url=source_url):
                     video = DayuVideo("大鱼号视频上传测试", BASE_DIR / "videos/demo.mp4", [],
@@ -174,7 +174,7 @@ class DayuMediaTests(unittest.TestCase):
             )
             video = DayuVideo("大鱼号视频上传测试", BASE_DIR / "videos/demo.mp4", [],
                               account_file, BASE_DIR / "videos/demo.png", "其他", "无需标注")
-            with self.assertRaisesRegex(ValueError, "至少需要 5 秒"):
+            with self.assertRaisesRegex(ValueError, "at least 5 seconds"):
                 video.validate_upload_args()
 
 

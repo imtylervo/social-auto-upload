@@ -1,4 +1,4 @@
-"""删除属于不可恢复操作，重点验证身份不匹配时不能走到删除动作。"""
+"""Deleting cannot be undone: the focus is that a mismatched identity never reaches the delete action."""
 
 import asyncio
 import unittest
@@ -34,7 +34,7 @@ class FacebookPostIdentityTests(unittest.TestCase):
                     article = await find_facebook_post(page, post_url='https://www.facebook.com/reel/222/', owner_id='42', expected_text='same caption')
                     self.assertIn('target', await article.inner_text())
                     self.assertNotIn('old', await article.inner_text())
-                    with self.assertRaisesRegex(RuntimeError, '登录用户'):
+                    with self.assertRaisesRegex(RuntimeError, 'logged-in Facebook user'):
                         await find_facebook_post(page, post_url='https://www.facebook.com/reel/222/', owner_id='99', expected_text='same caption')
                 finally:
                     await browser.close()
@@ -43,7 +43,7 @@ class FacebookPostIdentityTests(unittest.TestCase):
 
 class MetaPostIdentityTests(unittest.TestCase):
     def test_page_content_number_mismatch_stops_before_delete(self):
-        """即使配文和 Page 正确，也必须拒绝编号不同的原作品。"""
+        """Even with the right caption and Page, an original post with a different ID must be refused."""
         async def scenario():
             async with async_playwright() as p:
                 browser = await p.chromium.launch(channel='chrome', headless=True)
@@ -54,7 +54,7 @@ class MetaPostIdentityTests(unittest.TestCase):
                 </div><div id="detail" hidden>编号：123</div>'''
                 await page.route('https://business.facebook.com/**', lambda route: route.fulfill(body=html, content_type='text/html; charset=utf-8'))
                 try:
-                    with self.assertRaisesRegex(RuntimeError, '编号不匹配'):
+                    with self.assertRaisesRegex(RuntimeError, 'Original post ID does not match'):
                         await open_meta_post(page, list_url='https://business.facebook.com/latest/posts/scheduled_posts?asset_id=42',
                             page_name='Page name', expected_text='caption', content_id='999')
                 finally:

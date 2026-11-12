@@ -1,37 +1,37 @@
-# 抖音 CLI 契约
+# Douyin CLI contract
 
-这个 skill 默认假设当前环境已经安装并可调用 `sau` 命令。
+This skill assumes that `sau` is installed and callable in the current environment.
 
-## 命令列表
+## Commands
 
-### 登录
+### Login
 
 ```bash
 sau douyin login --account <account>
 ```
 
-- 必填参数:
+- Required arguments:
   - `--account`
-- 作用:
-  - 启动抖音登录流程，为指定账号生成或刷新 cookie 文件
-  - 如果登录过程中生成本地二维码图片，agent 应优先直接把图片展示/发送给用户扫码，而不是只回传路径
-- 账号说明:
-  - `--account` 传的是用户自定义的 `account_name`，不是固定只能叫 `creator`
-  - 一个 `account_name` 对应一个账号文件，可用于多账号隔离和并发任务
+- Purpose:
+  - Start the Douyin login flow and create or refresh the cookie file for the given account
+  - If a local QR code image is generated during login, the agent should show or send the image to the user to scan, rather than only returning the path
+- About accounts:
+  - `--account` takes a user-defined `account_name`; it does not have to be `creator`
+  - One `account_name` corresponds to one account file, which can be used to isolate multiple accounts and run tasks concurrently
 
-### 校验 cookie
+### Check the cookie
 
 ```bash
 sau douyin check --account <account>
 ```
 
-- 必填参数:
+- Required arguments:
   - `--account`
-- 预期输出:
-  - `valid`：cookie 可用
-  - `invalid`：cookie 缺失或已失效
+- Expected output:
+  - `valid`: the cookie is usable
+  - `invalid`: the cookie is missing or has expired
 
-### 上传视频
+### Upload a video
 
 ```bash
 sau douyin upload-video \
@@ -48,11 +48,11 @@ sau douyin upload-video \
   [--headless | --headed]
 ```
 
-- 必填参数:
+- Required arguments:
   - `--account`
   - `--file`
   - `--title`
-- 可选参数:
+- Optional arguments:
   - `--desc`
   - `--tags`
   - `--schedule`
@@ -63,7 +63,7 @@ sau douyin upload-video \
   - `--headless`
   - `--headed`
 
-### 上传图文
+### Upload an image post
 
 ```bash
 sau douyin upload-note \
@@ -77,11 +77,11 @@ sau douyin upload-note \
   [--headless | --headed]
 ```
 
-- 必填参数:
+- Required arguments:
   - `--account`
   - `--images`
   - `--title`
-- 可选参数:
+- Optional arguments:
   - `--note`
   - `--tags`
   - `--schedule`
@@ -89,21 +89,21 @@ sau douyin upload-note \
   - `--headless`
   - `--headed`
 
-## 发布策略
+## Publishing policy
 
-- 如果不传 `--schedule`，CLI 使用立即发布
-- 如果传了 `--schedule`，CLI 自动切换为定时发布
-- 时间格式为:
+- Without `--schedule`, the CLI publishes immediately
+- With `--schedule`, the CLI switches to scheduled publishing automatically
+- The time format is:
 
 ```text
 YYYY-MM-DD HH:MM
 ```
 
-## 额外说明
+## Additional notes
 
-- `upload-video` 每次命令只支持一个视频文件
-- `upload-note` 每次命令支持多张图片
-- 视频描述字段统一使用 `--desc`
-- 图文正文统一使用 `--note`
-- `upload-note` 当前不支持 GIF
-- `upload-note` 当前最多支持 35 张图片
+- `upload-video` accepts only one video file per command
+- `upload-note` accepts multiple images per command
+- The video description always uses `--desc`
+- The image post body always uses `--note`
+- `upload-note` does not currently support GIF
+- `upload-note` currently supports at most 35 images
